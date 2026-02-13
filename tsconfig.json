@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "paths": {
+      "@junctionjs/core": ["./packages/core/src"],
+      "@junctionjs/client": ["./packages/client/src"],
+      "@junctionjs/astro": ["./packages/astro/src"],
+      "@junctionjs/astro/*": ["./packages/astro/src/*"],
+      "@junctionjs/gateway": ["./packages/gateway/src"],
+      "@junctionjs/destination-amplitude": ["./packages/destination-amplitude/src"],
+      "@junctionjs/destination-ga4": ["./packages/destination-ga4/src"],
+      "@junctionjs/destination-meta": ["./packages/destination-meta/src"]
+    }
+  },
+  "include": ["packages/*/src/**/*.ts", "config/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

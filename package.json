@@ -1,0 +1,29 @@
+{
+  "name": "junction",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Next-generation, Git-native event collection and routing system",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "turbo build",
+    "test": "vitest run",
+    "test:contracts": "vitest run --filter=contracts",
+    "test:destinations": "vitest run --filter=destinations",
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0",
+    "zod": "^3.23.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}
