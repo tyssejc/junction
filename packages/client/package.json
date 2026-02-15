@@ -1,0 +1,38 @@
+{
+  "name": "@junctionjs/client",
+  "version": "0.1.0",
+  "description": "Browser runtime for Junction — anonymous IDs, sessions, auto page views, View Transitions",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --sourcemap --target es2022 --no-config --external @junctionjs/core",
+    "dev": "tsup src/index.ts --format esm --dts --watch --no-config --external @junctionjs/core",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@junctionjs/core": "*"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tyssejc/junction.git",
+    "directory": "packages/client"
+  },
+  "keywords": ["analytics", "browser", "event-collection", "tag-manager"]
+}

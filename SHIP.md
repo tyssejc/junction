@@ -3,7 +3,7 @@
 ## Step 1: Copy to your projects directory
 
 ```bash
-cp -r ~/Desktop/tagpilot ~/Code/projects/junction
+cp -r ~/Desktop/junction ~/Code/projects/junction
 cd ~/Code/projects/junction
 ```
 
@@ -15,7 +15,7 @@ cd ~/Code/projects/junction
 git init -b main
 git add -A
 git commit -m "Initial architecture: core, client, gateway, Astro integration, destinations"
-gh repo create junctionjs/junction --public --source=. --push
+gh repo create tyssejc/junction --public --source=. --push
 ```
 
 That's it. Four commands. Repo is live.

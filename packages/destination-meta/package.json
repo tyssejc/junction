@@ -1,0 +1,39 @@
+{
+  "name": "@junctionjs/destination-meta",
+  "version": "0.1.0",
+  "description": "Meta Pixel + Conversions API destination for Junction",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --sourcemap --target es2022 --no-config --external @junctionjs/core",
+    "dev": "tsup src/index.ts --format esm --dts --watch --no-config --external @junctionjs/core",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@junctionjs/core": "*"
+  },
+  "devDependencies": {
+    "@junctionjs/core": "*",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tyssejc/junction.git",
+    "directory": "packages/destination-meta"
+  },
+  "keywords": ["analytics", "meta", "facebook-pixel", "conversions-api", "junction-destination"]
+}

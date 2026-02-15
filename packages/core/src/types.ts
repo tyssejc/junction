@@ -158,7 +158,7 @@ export interface ConsentConfig {
  * The transform function replaces walkerOS's "mapping" — it's just
  * TypeScript, no DSL.
  */
-export interface Destination<TConfig extends Record<string, unknown> = Record<string, unknown>> {
+export interface Destination<TConfig = Record<string, unknown>> {
   /** Unique destination identifier (e.g., "amplitude", "ga4", "meta-pixel") */
   name: string;
 

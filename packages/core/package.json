@@ -1,0 +1,38 @@
+{
+  "name": "@junctionjs/core",
+  "version": "0.1.0",
+  "description": "Isomorphic event collector core — types, consent, validation, and runtime",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --sourcemap --target es2022 --no-config",
+    "dev": "tsup src/index.ts --format esm --dts --watch --no-config",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tyssejc/junction.git",
+    "directory": "packages/core"
+  },
+  "keywords": ["analytics", "event-collection", "tag-manager", "consent", "validation", "zod"]
+}

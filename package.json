@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "Next-generation, Git-native event collection and routing system",
+  "packageManager": "npm@10.9.4",
   "workspaces": [
     "packages/*"
   ],

@@ -306,9 +306,9 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       destinations.set(entry.destination.name, entry);
 
       // Initialize asynchronously
-      entry.destination.init(entry.config).then(() => {
+      Promise.resolve(entry.destination.init(entry.config)).then(() => {
         emit("destination:init", { destination: entry.destination.name });
-      }).catch((e) => {
+      }).catch((e: unknown) => {
         emit("destination:error", { destination: entry.destination.name, error: e });
       });
     },

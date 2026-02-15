@@ -61,12 +61,12 @@ Built for teams migrating away from proprietary tag managers (Adobe Launch, Goog
 
 ```
 Developer calls               Event is           Consent          Destinations
-tp.track("product","added")   validated via      gate checks      transform and
+jct.track("product","added")   validated via      gate checks      transform and
         │                     Zod contract       consent state    send to vendor
         │                         │                  │                │
         ▼                         ▼                  ▼                ▼
 ┌─────────────┐  ┌───────────┐  ┌──────────┐  ┌──────────────┐  ┌──────────┐
-│  track()    │→ │ Validator  │→ │ Consent  │→ │   Buffer     │→ │  Send    │
+│  track()    │→ │ Validator │→ │ Consent  │→ │   Buffer     │→ │  Send    │
 │  identify() │  │ (Zod)     │  │ Manager  │  │  (batch)     │  │ (async)  │
 │  consent()  │  │           │  │          │  │              │  │          │
 └─────────────┘  └───────────┘  └──────────┘  └──────────────┘  └──────────┘
@@ -96,7 +96,7 @@ Client POSTs to         Gateway enriches       Server-side destinations
 
 ```
 1. Build time:
-   astro.config.mjs → tagpilot() integration → injects scripts + middleware
+   astro.config.mjs → junction() integration → injects scripts + middleware
 
 2. SSR request:
    Request → Middleware (session, geo) → Page render → Response
@@ -105,7 +105,7 @@ Client POSTs to         Gateway enriches       Server-side destinations
    before-hydration script → createClient() → window.jct ready
 
 4. View Transitions:
-   astro:page-load event → tp.track("page","viewed") → destinations
+   astro:page-load event → jct.track("page","viewed") → destinations
 ```
 
 ---
@@ -228,7 +228,7 @@ main (production)
 ### CI/CD Pipeline
 
 ```yaml
-# .github/workflows/tagpilot.yml
+# .github/workflows/junction.yml
 name: Junction Deploy
 
 on:
