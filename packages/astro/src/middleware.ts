@@ -39,7 +39,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // ── Extract server-side context ──
 
   const serverContext = {
-    ip: request.headers.get("cf-connecting-ip") ??
+    ip:
+      request.headers.get("cf-connecting-ip") ??
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       request.headers.get("x-real-ip") ??
       "unknown",
@@ -52,9 +53,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       region: request.headers.get("cf-region") ?? undefined,
       city: request.headers.get("cf-ipcity") ?? undefined,
       // Vercel-specific
-      ...(request.headers.get("x-vercel-ip-country")
-        ? { country: request.headers.get("x-vercel-ip-country") }
-        : {}),
+      ...(request.headers.get("x-vercel-ip-country") ? { country: request.headers.get("x-vercel-ip-country") } : {}),
     },
 
     // Referer

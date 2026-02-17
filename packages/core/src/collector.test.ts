@@ -1,14 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { createCollector, type CreateCollectorOptions } from "./collector.js";
-import type {
-  Collector,
-  CollectorConfig,
-  Destination,
-  DestinationEntry,
-  EventSource,
-  JctEvent,
-} from "./types.js";
+import { type CreateCollectorOptions, createCollector } from "./collector.js";
+import type { Destination, JctEvent } from "./types.js";
 
 // ─── Mock Destination ───────────────────────────────────────────
 
@@ -165,16 +158,18 @@ describe("Collector", () => {
     it("drops invalid events in strict mode", () => {
       const dest = mockDestination();
       const options = makeOptions();
-      options.config.contracts = [{
-        entity: "product",
-        action: "viewed",
-        version: "1.0.0",
-        mode: "strict",
-        schema: z.object({
-          product_id: z.string().min(1),
-          price: z.number().nonnegative(),
-        }),
-      }];
+      options.config.contracts = [
+        {
+          entity: "product",
+          action: "viewed",
+          version: "1.0.0",
+          mode: "strict",
+          schema: z.object({
+            product_id: z.string().min(1),
+            price: z.number().nonnegative(),
+          }),
+        },
+      ];
       options.config.destinations = [{ destination: dest, config: {} }];
 
       const collector = createCollector(options);
@@ -189,13 +184,15 @@ describe("Collector", () => {
     it("passes uncontracted events through", () => {
       const dest = mockDestination();
       const options = makeOptions();
-      options.config.contracts = [{
-        entity: "product",
-        action: "viewed",
-        version: "1.0.0",
-        mode: "strict",
-        schema: z.object({ product_id: z.string() }),
-      }];
+      options.config.contracts = [
+        {
+          entity: "product",
+          action: "viewed",
+          version: "1.0.0",
+          mode: "strict",
+          schema: z.object({ product_id: z.string() }),
+        },
+      ];
       options.config.destinations = [{ destination: dest, config: {} }];
 
       const collector = createCollector(options);
@@ -209,13 +206,15 @@ describe("Collector", () => {
 
     it("emits event:invalid for failed validation", () => {
       const options = makeOptions();
-      options.config.contracts = [{
-        entity: "product",
-        action: "viewed",
-        version: "1.0.0",
-        mode: "strict",
-        schema: z.object({ product_id: z.string().min(1) }),
-      }];
+      options.config.contracts = [
+        {
+          entity: "product",
+          action: "viewed",
+          version: "1.0.0",
+          mode: "strict",
+          schema: z.object({ product_id: z.string().min(1) }),
+        },
+      ];
 
       const collector = createCollector(options);
       const handler = vi.fn();
@@ -475,7 +474,9 @@ describe("Collector", () => {
     it("continues dispatching to other destinations when one fails", () => {
       const failDest = mockDestination({
         name: "fail-dest",
-        transform: vi.fn(() => { throw new Error("Transform failed"); }),
+        transform: vi.fn(() => {
+          throw new Error("Transform failed");
+        }),
       });
       const goodDest = mockDestination({ name: "good-dest" });
 

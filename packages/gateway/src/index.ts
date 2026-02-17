@@ -25,13 +25,12 @@
  */
 
 import {
-  createCollector,
   type Collector,
   type CollectorConfig,
+  type DestinationEntry,
   type EventSource,
   type JctEvent,
-  type Destination,
-  type DestinationEntry,
+  createCollector,
 } from "@junctionjs/core";
 
 // ─── Gateway Configuration ───────────────────────────────────────
@@ -115,9 +114,7 @@ export function createGateway(config: GatewayConfig): Gateway {
         "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        ...(config.cors?.allowCredentials
-          ? { "Access-Control-Allow-Credentials": "true" }
-          : {}),
+        ...(config.cors?.allowCredentials ? { "Access-Control-Allow-Credentials": "true" } : {}),
       };
     }
 
@@ -164,7 +161,7 @@ export function createGateway(config: GatewayConfig): Gateway {
   // ── Request Handler ──
 
   async function handleRequest(request: Request): Promise<Response> {
-    const url = new URL(request.url);
+    const _url = new URL(request.url);
 
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
@@ -191,7 +188,7 @@ export function createGateway(config: GatewayConfig): Gateway {
     }
 
     try {
-      const body = await request.json() as { events?: JctEvent[] };
+      const body = (await request.json()) as { events?: JctEvent[] };
       const events = body.events;
 
       if (!Array.isArray(events) || events.length === 0) {
@@ -216,13 +213,10 @@ export function createGateway(config: GatewayConfig): Gateway {
       // Flush immediately (edge functions are short-lived)
       await collector.flush();
 
-      return new Response(
-        JSON.stringify({ ok: true, received: events.length }),
-        {
-          status: 200,
-          headers: { ...corsHeaders(request), "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ ok: true, received: events.length }), {
+        status: 200,
+        headers: { ...corsHeaders(request), "Content-Type": "application/json" },
+      });
     } catch (e) {
       console.error("[Junction:Gateway] Error:", e);
       return new Response(JSON.stringify({ error: "Internal error" }), {

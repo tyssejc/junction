@@ -12,7 +12,7 @@
  * but simplify the API.
  */
 
-import type { ConsentState, ConsentCategory, ConsentConfig, JctEvent } from "./types.js";
+import type { ConsentCategory, ConsentConfig, ConsentState, JctEvent } from "./types.js";
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -70,13 +70,16 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
   }
 
   // Queue cleanup timer — expire old events
-  let cleanupTimer: ReturnType<typeof setInterval> | null = null;
+  let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
   if (config.queueTimeout > 0) {
-    cleanupTimer = setInterval(() => {
-      const now = Date.now();
-      queue = queue.filter((item) => now - item.queuedAt < config.queueTimeout);
-    }, Math.min(config.queueTimeout, 30_000));
+    _cleanupTimer = setInterval(
+      () => {
+        const now = Date.now();
+        queue = queue.filter((item) => now - item.queuedAt < config.queueTimeout);
+      },
+      Math.min(config.queueTimeout, 30_000),
+    );
   }
 
   function notify(previous: ConsentState): void {

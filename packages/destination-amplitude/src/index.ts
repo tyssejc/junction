@@ -13,7 +13,7 @@
  * - Forwards user identity (identify + traits → Amplitude user properties)
  */
 
-import type { Destination, JctEvent, ConsentState } from "@junctionjs/core";
+import type { ConsentState, Destination, JctEvent } from "@junctionjs/core";
 
 // ─── Configuration ───────────────────────────────────────────────
 
@@ -37,11 +37,7 @@ export interface AmplitudeConfig {
    * - "entity:action": "product:added" (raw)
    * - Custom function for full control
    */
-  eventNameFormat?:
-    | "snake_case"
-    | "Title Case"
-    | "entity:action"
-    | ((entity: string, action: string) => string);
+  eventNameFormat?: "snake_case" | "Title Case" | "entity:action" | ((entity: string, action: string) => string);
 
   /**
    * Default event properties to include on every event.
@@ -59,11 +55,7 @@ export interface AmplitudeConfig {
 
 // ─── Event Name Formatting ───────────────────────────────────────
 
-function formatEventName(
-  entity: string,
-  action: string,
-  format: AmplitudeConfig["eventNameFormat"],
-): string {
+function formatEventName(entity: string, action: string, format: AmplitudeConfig["eventNameFormat"]): string {
   if (typeof format === "function") {
     return format(entity, action);
   }
@@ -73,7 +65,6 @@ function formatEventName(
       return `${capitalize(entity)} ${capitalize(action)}`;
     case "entity:action":
       return `${entity}:${action}`;
-    case "snake_case":
     default:
       return `${entity}_${action}`;
   }
@@ -136,9 +127,7 @@ function transformEvent(event: JctEvent, config: AmplitudeConfig): AmplitudeEven
   };
 
   // Build user properties from traits (for $set operations)
-  const userProperties = event.user.traits
-    ? { $set: event.user.traits }
-    : undefined;
+  const userProperties = event.user.traits ? { $set: event.user.traits } : undefined;
 
   return {
     event_type: eventName,
@@ -188,7 +177,7 @@ async function sendServer(payload: AmplitudeEvent, config: AmplitudeConfig): Pro
 
   // Server-side can use secret key for higher rate limits
   if (config.secretKey) {
-    headers["Authorization"] = `Basic ${btoa(`${config.apiKey}:${config.secretKey}`)}`;
+    headers.Authorization = `Basic ${btoa(`${config.apiKey}:${config.secretKey}`)}`;
   }
 
   const response = await fetch(url, {
@@ -240,7 +229,7 @@ export const amplitude: Destination<AmplitudeConfig> = {
     if (config.mode === "server" && !config.secretKey) {
       console.warn(
         "[Junction:Amplitude] Running in server mode without secretKey. " +
-        "Consider adding a secret key for higher rate limits.",
+          "Consider adding a secret key for higher rate limits.",
       );
     }
   },
@@ -257,7 +246,7 @@ export const amplitude: Destination<AmplitudeConfig> = {
 
     // Re-transform with actual config (transform doesn't have config access by design)
     // In practice, you'd restructure this — here we just re-apply config
-    const fullPayload = transformEvent(
+    const _fullPayload = transformEvent(
       // Reconstruct minimal event for re-transform
       {
         entity: "",

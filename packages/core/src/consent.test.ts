@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createConsentManager, type ConsentManager } from "./consent.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { type ConsentManager, createConsentManager } from "./consent.js";
 import type { ConsentConfig, JctEvent } from "./types.js";
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -80,10 +80,7 @@ describe("ConsentManager", () => {
       manager.setState({ analytics: true });
 
       expect(listener).toHaveBeenCalledTimes(1);
-      expect(listener).toHaveBeenCalledWith(
-        { analytics: true },
-        {},
-      );
+      expect(listener).toHaveBeenCalledWith({ analytics: true }, {});
     });
 
     it("passes previous state to listeners", () => {
@@ -93,10 +90,7 @@ describe("ConsentManager", () => {
 
       manager.setState({ analytics: true });
 
-      expect(listener).toHaveBeenCalledWith(
-        { necessary: true, analytics: true },
-        { necessary: true },
-      );
+      expect(listener).toHaveBeenCalledWith({ necessary: true, analytics: true }, { necessary: true });
     });
   });
 
@@ -275,10 +269,12 @@ describe("ConsentManager", () => {
         configurable: true,
       });
 
-      manager = createConsentManager(makeConfig({
-        respectDNT: true,
-        defaultState: { necessary: true },
-      }));
+      manager = createConsentManager(
+        makeConfig({
+          respectDNT: true,
+          defaultState: { necessary: true },
+        }),
+      );
 
       const state = manager.getState();
       expect(state.analytics).toBe(false);
@@ -301,10 +297,12 @@ describe("ConsentManager", () => {
         configurable: true,
       });
 
-      manager = createConsentManager(makeConfig({
-        respectGPC: true,
-        defaultState: { necessary: true },
-      }));
+      manager = createConsentManager(
+        makeConfig({
+          respectGPC: true,
+          defaultState: { necessary: true },
+        }),
+      );
 
       const state = manager.getState();
       expect(state.analytics).toBe(false);

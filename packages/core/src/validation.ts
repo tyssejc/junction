@@ -12,8 +12,8 @@
  * "strict" mode (throw on invalid) or "lenient" mode (warn + pass through).
  */
 
-import { z, type ZodType, type ZodError } from "zod";
-import type { JctEvent, EventContract } from "./types.js";
+import { type ZodError, type ZodType, z } from "zod";
+import type { EventContract, JctEvent } from "./types.js";
 
 // ─── Contract Registry ───────────────────────────────────────────
 

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import type { EventContract, JctEvent } from "./types.js";
 import { createValidator, schemas } from "./validation.js";
-import type { JctEvent, EventContract } from "./types.js";
 
 // ─── Helpers ────────────────────────────────────────────────────
 
@@ -135,12 +135,14 @@ describe("Validator", () => {
 
     it("supports wildcard action contracts", () => {
       const validator = createValidator();
-      validator.register(makeContract({
-        action: "*",
-        schema: z.object({
-          product_id: z.string().min(1),
+      validator.register(
+        makeContract({
+          action: "*",
+          schema: z.object({
+            product_id: z.string().min(1),
+          }),
         }),
-      }));
+      );
 
       // Any action on "product" should match
       const event = makeEvent({
@@ -156,21 +158,25 @@ describe("Validator", () => {
       const validator = createValidator();
 
       // Wildcard: only requires product_id
-      validator.register(makeContract({
-        action: "*",
-        schema: z.object({ product_id: z.string() }),
-      }));
+      validator.register(
+        makeContract({
+          action: "*",
+          schema: z.object({ product_id: z.string() }),
+        }),
+      );
 
       // Exact: requires more fields
-      validator.register(makeContract({
-        action: "viewed",
-        schema: z.object({
-          product_id: z.string(),
-          name: z.string(),
-          price: z.number(),
-          currency: z.string().length(3),
+      validator.register(
+        makeContract({
+          action: "viewed",
+          schema: z.object({
+            product_id: z.string(),
+            name: z.string(),
+            price: z.number(),
+            currency: z.string().length(3),
+          }),
         }),
-      }));
+      );
 
       // Event missing name/price/currency should fail against exact match
       const event = makeEvent({
@@ -183,14 +189,16 @@ describe("Validator", () => {
 
     it("replaces event properties with coerced data on success", () => {
       const validator = createValidator();
-      validator.register(makeContract({
-        schema: z.object({
-          product_id: z.string(),
-          name: z.string(),
-          price: z.coerce.number(), // coerces strings to numbers
-          currency: z.string().length(3),
+      validator.register(
+        makeContract({
+          schema: z.object({
+            product_id: z.string(),
+            name: z.string(),
+            price: z.coerce.number(), // coerces strings to numbers
+            currency: z.string().length(3),
+          }),
         }),
-      }));
+      );
 
       const event = makeEvent({
         properties: {
