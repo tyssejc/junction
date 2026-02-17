@@ -273,7 +273,7 @@ export function junction(options: JunctionAstroConfig): AstroIntegration {
         if (options.collectEndpoint !== false) {
           injectRoute({
             pattern: options.collectEndpoint ?? "/api/collect",
-            entrypoint: import.meta.resolve("./collect-endpoint.js"),
+            entrypoint: new URL("./collect-endpoint.js", import.meta.url).href,
           });
         }
       },
