@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Architecture & Design
+    url: https://github.com/tyssejc/junction/blob/main/docs/ARCHITECTURE.md
+    about: Read the architecture doc before proposing structural changes
+  - name: Contributing Guide
+    url: https://github.com/tyssejc/junction/blob/main/CONTRIBUTING.md
+    about: How to set up the project and submit PRs

@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/astro",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "description": "Astro v5+ integration for Junction — script injection, SSR middleware, collect endpoint",
   "type": "module",
   "main": "dist/index.js",
@@ -21,8 +21,8 @@
   },
   "files": ["dist", "README.md"],
   "scripts": {
-    "build": "tsup src/index.ts src/middleware.ts src/collect-endpoint.ts --format esm --dts --sourcemap --target es2022 --no-config --external @junctionjs/core --external @junctionjs/client --external astro --external astro:middleware",
-    "dev": "tsup src/index.ts src/middleware.ts src/collect-endpoint.ts --format esm --dts --watch --no-config --external @junctionjs/core --external @junctionjs/client --external astro --external astro:middleware",
+    "build": "tsup src/index.ts src/middleware.ts src/collect-endpoint.ts --format esm --dts --sourcemap --target es2022 --no-config --external @junctionjs/core --external @junctionjs/client --external @junctionjs/debug --external astro --external astro:middleware",
+    "dev": "tsup src/index.ts src/middleware.ts src/collect-endpoint.ts --format esm --dts --watch --no-config --external @junctionjs/core --external @junctionjs/client --external @junctionjs/debug --external astro --external astro:middleware",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit"
   },
@@ -30,10 +30,17 @@
     "@junctionjs/core": "*"
   },
   "peerDependencies": {
-    "astro": "^5.0.0"
+    "astro": "^5.0.0",
+    "@junctionjs/debug": "^0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@junctionjs/debug": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "astro": "^5.0.0",
+    "@junctionjs/debug": "*",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0"
   },

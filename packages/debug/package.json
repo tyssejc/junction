@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/debug",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "In-page debug panel for Junction — real-time event flow, consent state, destination status",
   "type": "module",
   "main": "dist/index.js",

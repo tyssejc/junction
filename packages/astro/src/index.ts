@@ -11,8 +11,8 @@
  *   astro:before-preparation to track navigations correctly.
  * - Middleware collects server-side context (IP, UA, geo) and makes it
  *   available to the client via a serialized data attribute.
- * - The integration injects at "before-hydration" stage so tracking is
- *   ready before any islands activate.
+ * - The integration injects at "page" stage so tracking runs on every
+ *   page as a module script, including those with no client islands.
  */
 
 import type { AstroIntegration } from "astro";
@@ -66,9 +66,24 @@ export interface JunctionAstroConfig {
 
   /**
    * Enable debug mode (default: false).
-   * Logs all events to the browser console.
+   * When true, injects the @junctionjs/debug panel into the page.
+   * Tip: use `debug: import.meta.env.DEV` to auto-enable in dev only.
    */
   debug?: boolean;
+
+  /**
+   * Debug panel options (only used when debug: true).
+   */
+  debugOptions?: {
+    /** Keyboard shortcut to toggle (default: "ctrl+shift+j") */
+    shortcut?: string;
+    /** Max events in ring buffer (default: 500) */
+    maxEvents?: number;
+    /** Start with panel open (default: false) */
+    startOpen?: boolean;
+    /** Panel position (default: "bottom-right") */
+    position?: "top-left" | "top-right" | "bottom-left" | "bottom-right";
+  };
 }
 
 /**
@@ -115,7 +130,13 @@ export function junction(options: JunctionAstroConfig): AstroIntegration {
         const globalName = options.globalName ?? "jct";
         const debug = options.debug ?? false;
 
-        // ── 1. Inject initialization script (before hydration) ──
+        // ── 1. Inject initialization script ──
+        //
+        // We use "page" rather than "before-hydration" because
+        // before-hydration only runs on pages with client islands.
+        // We can't use "head-inline" because it's not a module context
+        // and our init script uses ES imports.
+        // "page" runs as a module on every page — exactly what we need.
 
         // Build destination imports
         const destinationImports = options.config.destinations
@@ -153,7 +174,7 @@ export function junction(options: JunctionAstroConfig): AstroIntegration {
           });
         `;
 
-        injectScript("before-hydration", initScript);
+        injectScript("page", initScript);
 
         // ── 2. Inject View Transitions handler ──
 
@@ -195,7 +216,50 @@ export function junction(options: JunctionAstroConfig): AstroIntegration {
           );
         }
 
-        // ── 3. Add server-side middleware ──
+        // ── 3. Inject debug panel (when debug: true) ──
+
+        if (debug) {
+          const dbgOpts = options.debugOptions ?? {};
+          const debugScript = `
+            import { createDebugPanel } from "@junctionjs/debug";
+
+            // Junction: Debug panel with View Transitions support.
+            // Uses astro:page-load which fires on every page (with or without
+            // View Transitions). The panel's host lives in <body>, which Astro
+            // swaps on navigations. We guard against duplicate creation and
+            // re-create only when the host has been removed by a swap.
+
+            function initDebugPanel() {
+              const collector = window.${globalName};
+              if (!collector) return;
+
+              // Guard: if a host element already exists in the DOM, skip.
+              if (document.querySelector("junction-debug")) return;
+
+              // If there's a previous instance whose host was removed by a
+              // View Transition swap, destroy it (store is lost, but that's
+              // expected across navigations).
+              if (window.__jct_debug) {
+                window.__jct_debug.destroy();
+              }
+
+              window.__jct_debug = createDebugPanel(collector, {
+                shortcut: ${JSON.stringify(dbgOpts.shortcut ?? "ctrl+shift+j")},
+                maxEvents: ${dbgOpts.maxEvents ?? 500},
+                startOpen: ${dbgOpts.startOpen ?? false},
+                position: ${JSON.stringify(dbgOpts.position ?? "bottom-right")},
+              });
+            }
+
+            // astro:page-load fires on initial load and every View Transition
+            // navigation — no fallback needed.
+            document.addEventListener("astro:page-load", initDebugPanel);
+          `;
+
+          injectScript("page", debugScript);
+        }
+
+        // ── 4. Add server-side middleware ──
 
         if (options.collectEndpoint !== false) {
           addMiddleware({
@@ -204,12 +268,12 @@ export function junction(options: JunctionAstroConfig): AstroIntegration {
           });
         }
 
-        // ── 4. Add collect API endpoint ──
+        // ── 5. Add collect API endpoint ──
 
         if (options.collectEndpoint !== false) {
           injectRoute({
             pattern: options.collectEndpoint ?? "/api/collect",
-            entrypoint: "@junctionjs/astro/collect-endpoint",
+            entrypoint: import.meta.resolve("./collect-endpoint.js"),
           });
         }
       },

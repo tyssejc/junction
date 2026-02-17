@@ -1,0 +1,44 @@
+name: Destination Request
+description: Request or propose a new analytics destination
+labels: ["destination"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Want to add support for a new analytics or marketing platform? Great!
+        New destinations are the easiest way to contribute — see [CONTRIBUTING.md](../../CONTRIBUTING.md) for the recipe.
+
+  - type: input
+    id: service
+    attributes:
+      label: Service / Platform
+      placeholder: "e.g., LinkedIn Insight Tag, TikTok Pixel, Mixpanel"
+    validations:
+      required: true
+
+  - type: textarea
+    id: api
+    attributes:
+      label: API details
+      description: Link to the service's developer docs, SDK, or API reference.
+
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Runtime support needed
+      options:
+        - Client-side only (browser SDK / pixel)
+        - Server-side only (HTTP API)
+        - Both client and server
+        - Not sure
+
+  - type: dropdown
+    id: willing
+    attributes:
+      label: Would you be willing to implement this?
+      options:
+        - "Yes — I'd like to submit a PR"
+        - "Maybe — I could use some guidance"
+        - "No — just requesting it"
+    validations:
+      required: true
