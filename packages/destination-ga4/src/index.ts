@@ -10,7 +10,7 @@
  * changes, we update gtag's consent settings automatically.
  */
 
-import type { Destination, JctEvent, ConsentState } from "@junctionjs/core";
+import type { ConsentState, Destination, JctEvent } from "@junctionjs/core";
 
 // ─── Configuration ───────────────────────────────────────────────
 
@@ -101,11 +101,7 @@ function getGA4EventName(event: JctEvent, config: GA4Config): string {
   const key = `${event.entity}:${event.action}`;
 
   // Check custom mapping first, then default mapping, then generate
-  return (
-    config.eventNameMap?.[key] ??
-    GA4_EVENT_MAP[key] ??
-    `${event.entity}_${event.action}`
-  );
+  return config.eventNameMap?.[key] ?? GA4_EVENT_MAP[key] ?? `${event.entity}_${event.action}`;
 }
 
 // ─── Parameter Mapping ───────────────────────────────────────────
@@ -132,10 +128,7 @@ const GA4_PARAM_MAP: Record<string, string> = {
   search_term: "search_term",
 };
 
-function mapParameters(
-  properties: Record<string, unknown>,
-  config: GA4Config,
-): Record<string, unknown> {
+function mapParameters(properties: Record<string, unknown>, config: GA4Config): Record<string, unknown> {
   const mapped: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(properties)) {
@@ -168,8 +161,8 @@ function loadGtag(measurementId: string, gtagUrl?: string): void {
 
   // Initialize dataLayer
   (window as any).dataLayer = (window as any).dataLayer || [];
-  (window as any).gtag = function () {
-    (window as any).dataLayer.push(arguments);
+  (window as any).gtag = (...args: any[]) => {
+    (window as any).dataLayer.push(args);
   };
   (window as any).gtag("js", new Date());
 

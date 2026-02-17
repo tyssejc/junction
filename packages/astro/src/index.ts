@@ -15,8 +15,8 @@
  *   page as a module script, including those with no client islands.
  */
 
-import type { AstroIntegration } from "astro";
 import type { CollectorConfig } from "@junctionjs/core";
+import type { AstroIntegration } from "astro";
 
 // ─── Astro Integration ───────────────────────────────────────────
 

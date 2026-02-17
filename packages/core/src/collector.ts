@@ -13,21 +13,20 @@
  *   (track() returns void, not a Promise). Async work happens in the background.
  */
 
+import { type ConsentManager, createConsentManager } from "./consent.js";
 import type {
-  JctEvent,
-  EventContext,
-  EventSource,
-  UserIdentity,
-  ConsentState,
-  ConsentCategory,
   Collector,
   CollectorConfig,
   CollectorEvent,
   CollectorEventHandler,
+  ConsentState,
   DestinationEntry,
+  EventContext,
+  EventSource,
+  JctEvent,
+  UserIdentity,
 } from "./types.js";
-import { createConsentManager, type ConsentManager } from "./consent.js";
-import { createValidator, type Validator } from "./validation.js";
+import { type Validator, createValidator } from "./validation.js";
 
 // ─── Utilities ───────────────────────────────────────────────────
 
@@ -152,7 +151,7 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       try {
         handler(data);
       } catch (e) {
-        console.error(`[Junction] Event handler error:`, e);
+        console.error("[Junction] Event handler error:", e);
       }
     }
   }
@@ -169,11 +168,7 @@ export function createCollector(options: CreateCollectorOptions): Collector {
     };
   }
 
-  function buildEvent<T extends Record<string, unknown>>(
-    entity: string,
-    action: string,
-    properties?: T,
-  ): JctEvent<T> {
+  function buildEvent<T extends Record<string, unknown>>(entity: string, action: string, properties?: T): JctEvent<T> {
     return {
       entity,
       action,
@@ -246,11 +241,7 @@ export function createCollector(options: CreateCollectorOptions): Collector {
   // ── Public API ─────────────────────────────────────────
 
   const collector: Collector = {
-    track<T extends Record<string, unknown>>(
-      entity: string,
-      action: string,
-      properties?: T,
-    ): void {
+    track<T extends Record<string, unknown>>(entity: string, action: string, properties?: T): void {
       const event = buildEvent(entity, action, properties);
 
       // Validate
@@ -258,7 +249,7 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       if (!result.valid) {
         emit("event:invalid", { event, errors: result.errors });
         if (config.debug) {
-          console.warn(`[Junction] Event validation failed:`, result.errors?.flatten());
+          console.warn("[Junction] Event validation failed:", result.errors?.flatten());
         }
         return; // drop invalid events in strict mode
       }
@@ -306,11 +297,13 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       destinations.set(entry.destination.name, entry);
 
       // Initialize asynchronously
-      Promise.resolve(entry.destination.init(entry.config)).then(() => {
-        emit("destination:init", { destination: entry.destination.name });
-      }).catch((e: unknown) => {
-        emit("destination:error", { destination: entry.destination.name, error: e });
-      });
+      Promise.resolve(entry.destination.init(entry.config))
+        .then(() => {
+          emit("destination:init", { destination: entry.destination.name });
+        })
+        .catch((e: unknown) => {
+          emit("destination:error", { destination: entry.destination.name, error: e });
+        });
     },
 
     removeDestination(name: string): void {

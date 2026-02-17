@@ -11,11 +11,11 @@
  */
 
 import {
-  createCollector,
   type Collector,
   type CollectorConfig,
   type EventContext,
   type EventSource,
+  createCollector,
 } from "@junctionjs/core";
 
 // ─── Browser Context Resolver ────────────────────────────────────
@@ -43,12 +43,8 @@ function resolveBrowserContext(): Partial<EventContext> {
       type: /mobile/i.test(ua) ? "mobile" : /tablet/i.test(ua) ? "tablet" : "desktop",
       userAgent: ua,
       language: navigator.language,
-      viewport: typeof window !== "undefined"
-        ? { width: window.innerWidth, height: window.innerHeight }
-        : undefined,
-      screenResolution: typeof screen !== "undefined"
-        ? { width: screen.width, height: screen.height }
-        : undefined,
+      viewport: typeof window !== "undefined" ? { width: window.innerWidth, height: window.innerHeight } : undefined,
+      screenResolution: typeof screen !== "undefined" ? { width: screen.width, height: screen.height } : undefined,
     };
   }
 
@@ -209,12 +205,12 @@ export function createClient(config: ClientConfig): JunctionClient {
       const originalPushState = history.pushState.bind(history);
       const originalReplaceState = history.replaceState.bind(history);
 
-      history.pushState = function (...args) {
+      history.pushState = (...args) => {
         originalPushState(...args);
         client.track("page", "viewed");
       };
 
-      history.replaceState = function (...args) {
+      history.replaceState = (...args) => {
         originalReplaceState(...args);
         // Don't track replaceState as page view — it's usually for URL cleanup
       };
@@ -228,7 +224,7 @@ export function createClient(config: ClientConfig): JunctionClient {
   // ── Beacon on unload ───────────────────────────────────
 
   if (config.useBeacon !== false && config.beaconUrl) {
-    const beaconUrl = config.beaconUrl;
+    const _beaconUrl = config.beaconUrl;
 
     if (typeof document !== "undefined") {
       document.addEventListener("visibilitychange", () => {

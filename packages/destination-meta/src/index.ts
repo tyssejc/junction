@@ -11,7 +11,7 @@
  * The event_id field is shared between pixel and CAPI for deduplication.
  */
 
-import type { Destination, JctEvent, ConsentState } from "@junctionjs/core";
+import type { ConsentState, Destination, JctEvent } from "@junctionjs/core";
 
 // ─── Configuration ───────────────────────────────────────────────
 
@@ -100,7 +100,15 @@ interface CAPIPayload {
       ph?: string; // hashed phone
     };
     custom_data: Record<string, unknown>;
-    action_source: "website" | "email" | "app" | "phone_call" | "chat" | "physical_store" | "system_generated" | "other";
+    action_source:
+      | "website"
+      | "email"
+      | "app"
+      | "phone_call"
+      | "chat"
+      | "physical_store"
+      | "system_generated"
+      | "other";
   }>;
   test_event_code?: string;
 }
@@ -137,9 +145,10 @@ function loadPixel(pixelId: string): void {
   if (typeof window === "undefined") return;
   if (typeof (window as any).fbq === "function") return;
 
-  // Standard Meta Pixel initialization
-  const n: any = ((window as any).fbq = function () {
-    n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+  // Standard Meta Pixel initialization (matches official fbq snippet)
+  // biome-ignore lint/suspicious/noAssignInExpressions: official Meta Pixel init pattern
+  const n: any = ((window as any).fbq = (...args: any[]) => {
+    n.callMethod ? n.callMethod.apply(n, args) : n.queue.push(args);
   });
   if (!(window as any)._fbq) (window as any)._fbq = n;
   n.push = n;

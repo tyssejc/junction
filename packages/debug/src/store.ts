@@ -6,7 +6,7 @@
  * log with aggregate counters.
  */
 
-import type { Collector, CollectorEvent, CollectorEventHandler, JctEvent } from "@junctionjs/core";
+import type { Collector, CollectorEvent, CollectorEventHandler } from "@junctionjs/core";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ export interface DebugStore {
 
 // ─── Implementation ─────────────────────────────────────────────
 
-export function createDebugStore(collector: Collector, maxEvents: number = 500): DebugStore {
+export function createDebugStore(collector: Collector, maxEvents = 500): DebugStore {
   let entries: DebugEntry[] = [];
   let nextId = 1;
   const listeners = new Set<() => void>();
@@ -105,7 +105,11 @@ export function createDebugStore(collector: Collector, maxEvents: number = 500):
 
     // Notify listeners
     for (const cb of listeners) {
-      try { cb(); } catch { /* swallow */ }
+      try {
+        cb();
+      } catch {
+        /* swallow */
+      }
     }
   }
 
@@ -152,13 +156,19 @@ export function createDebugStore(collector: Collector, maxEvents: number = 500):
       counters.consentChanges = 0;
       counters.queueFlushes = 0;
       for (const cb of listeners) {
-        try { cb(); } catch { /* swallow */ }
+        try {
+          cb();
+        } catch {
+          /* swallow */
+        }
       }
     },
 
     onUpdate(callback: () => void) {
       listeners.add(callback);
-      return () => { listeners.delete(callback); };
+      return () => {
+        listeners.delete(callback);
+      };
     },
 
     destroy() {

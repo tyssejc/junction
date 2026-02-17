@@ -15,12 +15,12 @@
  * and what GTM's "Container" would be if it were developer-friendly.
  */
 
-import { z } from "zod";
 import type { CollectorConfig, EventContract } from "@junctionjs/core";
 import { schemas } from "@junctionjs/core";
 import { amplitude } from "@junctionjs/destination-amplitude";
 import { ga4 } from "@junctionjs/destination-ga4";
 import { meta } from "@junctionjs/destination-meta";
+import { z } from "zod";
 
 // ─── Environment ─────────────────────────────────────────────────
 
@@ -182,9 +182,7 @@ export const config: CollectorConfig = {
       config: {
         pixelId: META_PIXELS[env] ?? META_PIXELS.development,
         // CAPI access token only in production (server-side)
-        ...(env === "production"
-          ? { accessToken: process.env.META_CAPI_TOKEN }
-          : {}),
+        ...(env === "production" ? { accessToken: process.env.META_CAPI_TOKEN } : {}),
       },
       consent: ["marketing"],
     },

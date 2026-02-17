@@ -7,9 +7,9 @@
  * 4 tabs: Events | Consent | Destinations | Context
  */
 
-import type { Collector, CollectorEvent, ConsentState, JctEvent } from "@junctionjs/core";
+import type { Collector, CollectorEvent, JctEvent } from "@junctionjs/core";
+import type { DebugEntry, DebugStore } from "./store.js";
 import { PANEL_STYLES } from "./styles.js";
-import type { DebugStore, DebugEntry } from "./store.js";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -60,15 +60,15 @@ function formatTime(iso: string): string {
 
 function badgeClass(type: CollectorEvent): string {
   const map: Record<string, string> = {
-    "event": "jd-badge-event",
+    event: "jd-badge-event",
     "event:valid": "jd-badge-valid",
     "event:invalid": "jd-badge-invalid",
     "destination:send": "jd-badge-send",
     "destination:error": "jd-badge-error",
     "destination:init": "jd-badge-init",
-    "consent": "jd-badge-consent",
+    consent: "jd-badge-consent",
     "queue:flush": "jd-badge-queue",
-    "error": "jd-badge-error",
+    error: "jd-badge-error",
   };
   return map[type] ?? "jd-badge-event";
 }
@@ -145,11 +145,7 @@ function syntaxHighlight(obj: unknown, indent = 0): string {
 
 // ─── Panel Factory ──────────────────────────────────────────────
 
-export function createPanel(
-  collector: Collector,
-  store: DebugStore,
-  options: PanelOptions,
-): Panel {
+export function createPanel(collector: Collector, store: DebugStore, options: PanelOptions): Panel {
   const posClass = `jd-pos-${options.position}`;
 
   // ── Shadow host ──
@@ -180,16 +176,18 @@ export function createPanel(
 
   // ── Header ──
   const clearBtn = el("button", { class: "jd-header-btn", title: "Clear" }, "\u2715 Clear");
-  clearBtn.addEventListener("click", () => { store.clear(); render(); });
+  clearBtn.addEventListener("click", () => {
+    store.clear();
+    render();
+  });
 
   const closeBtn = el("button", { class: "jd-header-btn", title: "Close" }, "\u2715");
   closeBtn.addEventListener("click", close);
 
-  const header = el("div", { class: "jd-header" },
-    el("div", { class: "jd-header-title" },
-      el("span", {}, "J"),
-      " unction Debug",
-    ),
+  const header = el(
+    "div",
+    { class: "jd-header" },
+    el("div", { class: "jd-header-title" }, el("span", {}, "J"), " unction Debug"),
     el("div", { class: "jd-header-actions" }, clearBtn, closeBtn),
   );
   panel.appendChild(header);
@@ -206,7 +204,9 @@ export function createPanel(
   const tabBtns: Record<string, HTMLButtonElement> = {};
   for (const td of tabDefs) {
     const btn = el("button", { class: `jd-tab ${td.id === activeTab ? "jd-active" : ""}` }, td.label);
-    btn.addEventListener("click", () => { switchTab(td.id); });
+    btn.addEventListener("click", () => {
+      switchTab(td.id);
+    });
     tabBtns[td.id] = btn;
     tabBar.appendChild(btn);
   }
@@ -256,7 +256,8 @@ export function createPanel(
   }
 
   function toggle() {
-    if (isOpen) close(); else open();
+    if (isOpen) close();
+    else open();
   }
 
   // ── Render functions ──
@@ -267,10 +268,18 @@ export function createPanel(
     if (!isOpen) return;
 
     switch (activeTab) {
-      case "events": renderEvents(); break;
-      case "consent": renderConsent(); break;
-      case "destinations": renderDestinations(); break;
-      case "context": renderContext(); break;
+      case "events":
+        renderEvents();
+        break;
+      case "consent":
+        renderConsent();
+        break;
+      case "destinations":
+        renderDestinations();
+        break;
+      case "context":
+        renderContext();
+        break;
     }
   }
 
@@ -294,7 +303,11 @@ export function createPanel(
 
     addCounter("jd-dot-green", "valid", c.valid);
     addCounter("jd-dot-red", "invalid", c.invalid);
-    addCounter("jd-dot-blue", "sent", Object.values(c.sent).reduce((a, b) => a + b, 0));
+    addCounter(
+      "jd-dot-blue",
+      "sent",
+      Object.values(c.sent).reduce((a, b) => a + b, 0),
+    );
 
     statusbar.appendChild(counters);
     statusbar.appendChild(document.createTextNode(`${store.getEntries().length} entries`));
@@ -339,7 +352,9 @@ export function createPanel(
     }
 
     if (entries.length === 0) {
-      list.appendChild(el("div", { class: "jd-empty" }, filterText ? "No matching events" : "Waiting for events\u2026"));
+      list.appendChild(
+        el("div", { class: "jd-empty" }, filterText ? "No matching events" : "Waiting for events\u2026"),
+      );
       return;
     }
 
@@ -349,7 +364,9 @@ export function createPanel(
       const row = el("li", { class: "jd-event-row" });
 
       row.appendChild(el("span", { class: "jd-event-time" }, formatTime(entry.timestamp)));
-      row.appendChild(el("span", { class: `jd-event-badge ${badgeClass(entry.type)}` }, entry.type.replace("destination:", "dest:")));
+      row.appendChild(
+        el("span", { class: `jd-event-badge ${badgeClass(entry.type)}` }, entry.type.replace("destination:", "dest:")),
+      );
       row.appendChild(el("span", { class: "jd-event-name" }, eventLabel(entry)));
 
       const dl = destLabel(entry);
@@ -399,20 +416,27 @@ export function createPanel(
       let statusText: string;
       let statusClass: string;
       if (value === true) {
-        statusText = "\u2713"; statusClass = "jd-consent-granted";
+        statusText = "\u2713";
+        statusClass = "jd-consent-granted";
       } else if (value === false) {
-        statusText = "\u2717"; statusClass = "jd-consent-denied";
+        statusText = "\u2717";
+        statusClass = "jd-consent-denied";
       } else {
-        statusText = "\u25CB"; statusClass = "jd-consent-pending";
+        statusText = "\u25CB";
+        statusClass = "jd-consent-pending";
       }
 
-      const statusEl = el("span", { class: `jd-consent-status ${statusClass}`, title: "Click to toggle (testing)" }, statusText);
+      const statusEl = el(
+        "span",
+        { class: `jd-consent-status ${statusClass}`, title: "Click to toggle (testing)" },
+        statusText,
+      );
 
       // Click to toggle for testing
       if (cat !== "necessary") {
         statusEl.addEventListener("click", () => {
           const current = (collector.getConsent() as Record<string, boolean | undefined>)[cat];
-          const next = current === true ? false : true;
+          const next = current !== true;
           collector.consent({ [cat]: next });
           // Re-render after a tick
           requestAnimationFrame(() => renderConsent());
@@ -427,9 +451,13 @@ export function createPanel(
 
     // Counters
     const counters = store.getCounters();
-    tp.appendChild(el("div", { class: "jd-consent-info" },
-      `${counters.consentChanges} consent changes \u00B7 ${counters.queueFlushes} queue flushes \u00B7 Click status to toggle (testing only)`,
-    ));
+    tp.appendChild(
+      el(
+        "div",
+        { class: "jd-consent-info" },
+        `${counters.consentChanges} consent changes \u00B7 ${counters.queueFlushes} queue flushes \u00B7 Click status to toggle (testing only)`,
+      ),
+    );
   }
 
   // ── Destinations tab ──
@@ -500,9 +528,7 @@ export function createPanel(
 
     // Try to get latest event for context
     const entries = store.getEntries();
-    const latestEvent = [...entries].reverse().find((e) =>
-      e.type === "event:valid" || e.type === "event",
-    );
+    const latestEvent = [...entries].reverse().find((e) => e.type === "event:valid" || e.type === "event");
 
     const event = latestEvent?.payload as JctEvent | undefined;
 
@@ -579,9 +605,10 @@ export function createPanel(
 
     // Consent state
     const consent = collector.getConsent();
-    const consentRows: [string, string][] = Object.entries(consent).map(
-      ([k, v]) => [k, v === true ? "\u2713 granted" : v === false ? "\u2717 denied" : "\u25CB pending"],
-    );
+    const consentRows: [string, string][] = Object.entries(consent).map(([k, v]) => [
+      k,
+      v === true ? "\u2713 granted" : v === false ? "\u2717 denied" : "\u25CB pending",
+    ]);
     if (consentRows.length > 0) {
       addSection("Consent", consentRows);
     }

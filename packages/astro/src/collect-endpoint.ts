@@ -15,8 +15,8 @@
  * Body: { events: JctEvent[] }
  */
 
-import type { APIContext } from "astro";
 import type { JctEvent } from "@junctionjs/core";
+import type { APIContext } from "astro";
 
 export async function POST(context: APIContext): Promise<Response> {
   try {

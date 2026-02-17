@@ -122,13 +122,7 @@ export type EventSource = {
  * because CMPs think in categories. This maps directly to OneTrust, Cookiebot,
  * Usercentrics, etc.
  */
-export type ConsentCategory =
-  | "necessary"
-  | "analytics"
-  | "marketing"
-  | "personalization"
-  | "social"
-  | string; // extensible for custom categories
+export type ConsentCategory = "necessary" | "analytics" | "marketing" | "personalization" | "social" | string; // extensible for custom categories
 
 export type ConsentState = Partial<Record<ConsentCategory, boolean>>;
 
@@ -279,12 +273,7 @@ export interface Rule {
   priority?: number;
 }
 
-export type RuleCondition =
-  | URLCondition
-  | CookieCondition
-  | HeaderCondition
-  | ElementCondition
-  | CustomCondition;
+export type RuleCondition = URLCondition | CookieCondition | HeaderCondition | ElementCondition | CustomCondition;
 
 export interface URLCondition {
   type: "url";
@@ -363,12 +352,12 @@ export interface CollectorConfig {
   };
 }
 
-export interface DestinationEntry {
+export interface DestinationEntry<TConfig = Record<string, unknown>> {
   /** Destination plugin reference */
-  destination: Destination;
+  destination: Destination<any>;
 
   /** Destination-specific configuration */
-  config: Record<string, unknown>;
+  config: TConfig;
 
   /** Override consent requirements (optional — defaults to destination's own) */
   consent?: ConsentCategory[];
@@ -388,11 +377,7 @@ export interface DestinationEntry {
  */
 export interface Collector {
   /** Track an event */
-  track: <T extends Record<string, unknown>>(
-    entity: string,
-    action: string,
-    properties?: T,
-  ) => void;
+  track: <T extends Record<string, unknown>>(entity: string, action: string, properties?: T) => void;
 
   /** Identify a user */
   identify: (userId: string, traits?: Record<string, unknown>) => void;
@@ -420,15 +405,15 @@ export interface Collector {
 }
 
 export type CollectorEvent =
-  | "event"         // any event tracked
-  | "event:valid"   // event passed validation
+  | "event" // any event tracked
+  | "event:valid" // event passed validation
   | "event:invalid" // event failed validation
-  | "consent"       // consent state changed
-  | "destination:send"    // event sent to destination
-  | "destination:error"   // destination send failed
-  | "destination:init"    // destination initialized
-  | "queue:flush"         // consent queue flushed
-  | "error";              // any error
+  | "consent" // consent state changed
+  | "destination:send" // event sent to destination
+  | "destination:error" // destination send failed
+  | "destination:init" // destination initialized
+  | "queue:flush" // consent queue flushed
+  | "error"; // any error
 
 export type CollectorEventHandler = (data: {
   type: CollectorEvent;

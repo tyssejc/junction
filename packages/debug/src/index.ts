@@ -20,8 +20,8 @@
  */
 
 import type { Collector } from "@junctionjs/core";
-import { createDebugStore, type DebugStore } from "./store.js";
-import { createPanel, type Panel, type PanelPosition } from "./panel.js";
+import { type PanelPosition, createPanel } from "./panel.js";
+import { type DebugStore, createDebugStore } from "./store.js";
 
 // ─── Public Types ───────────────────────────────────────────────
 
@@ -67,7 +67,10 @@ interface ShortcutDef {
 }
 
 function parseShortcut(shortcut: string): ShortcutDef {
-  const parts = shortcut.toLowerCase().split("+").map((s) => s.trim());
+  const parts = shortcut
+    .toLowerCase()
+    .split("+")
+    .map((s) => s.trim());
   const key = parts.pop() ?? "";
 
   return {
@@ -91,18 +94,20 @@ function matchesShortcut(event: KeyboardEvent, def: ShortcutDef): boolean {
 
 // ─── Factory ────────────────────────────────────────────────────
 
-export function createDebugPanel(
-  collector: Collector,
-  options?: DebugPanelOptions,
-): DebugPanelInstance {
+export function createDebugPanel(collector: Collector, options?: DebugPanelOptions): DebugPanelInstance {
   if (typeof window === "undefined" || typeof document === "undefined") {
     // SSR / non-browser: return a noop instance
     const noopStore: DebugStore = {
       getEntries: () => [],
       getByType: () => [],
       getCounters: () => ({
-        total: 0, valid: 0, invalid: 0, sent: {}, errors: {},
-        consentChanges: 0, queueFlushes: 0,
+        total: 0,
+        valid: 0,
+        invalid: 0,
+        sent: {},
+        errors: {},
+        consentChanges: 0,
+        queueFlushes: 0,
       }),
       clear: () => {},
       onUpdate: () => () => {},
