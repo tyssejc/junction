@@ -21,7 +21,8 @@
       "@junctionjs/destination-amplitude": ["./packages/destination-amplitude/src"],
       "@junctionjs/destination-ga4": ["./packages/destination-ga4/src"],
       "@junctionjs/destination-meta": ["./packages/destination-meta/src"],
-      "@junctionjs/destination-http": ["./packages/destination-http/src"]
+      "@junctionjs/destination-http": ["./packages/destination-http/src"],
+      "@junctionjs/destination-plausible": ["./packages/destination-plausible/src"]
     }
   },
   "include": ["packages/*/src/**/*.ts", "config/**/*.ts"],
