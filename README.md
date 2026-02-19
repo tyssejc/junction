@@ -25,6 +25,8 @@ Tag managers were designed for marketers adding snippets to websites. Junction i
 | [`@junctionjs/destination-amplitude`](packages/destination-amplitude) | Amplitude (HTTP API, client + server) |
 | [`@junctionjs/destination-ga4`](packages/destination-ga4) | GA4 (gtag.js, Measurement Protocol, Consent Mode v2) |
 | [`@junctionjs/destination-meta`](packages/destination-meta) | Meta Pixel + Conversions API |
+| [`@junctionjs/destination-http`](packages/destination-http) | Generic HTTP destination — POST events to any endpoint |
+| [`@junctionjs/destination-plausible`](packages/destination-plausible) | Plausible Analytics — privacy-first, consent-exempt |
 | [`@junctionjs/debug`](packages/debug) | In-page debug panel — real-time event flow visibility |
 
 ## Quick start
