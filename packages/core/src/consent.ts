@@ -115,8 +115,8 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
     },
 
     isAllowed(required: ConsentCategory[]): boolean {
-      // "necessary" is always allowed
-      if (required.length === 0 || required.every((c) => c === "necessary")) {
+      // "necessary" and "exempt" are always allowed
+      if (required.length === 0 || required.every((c) => c === "necessary" || c === "exempt")) {
         return true;
       }
 
@@ -126,7 +126,10 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
 
     isPending(categories: ConsentCategory[]): boolean {
       // A category is "pending" if it hasn't been explicitly set to true or false
-      return categories.some((cat) => state[cat] === undefined);
+      // "necessary" and "exempt" categories are never pending
+      return categories
+        .filter((cat) => cat !== "necessary" && cat !== "exempt")
+        .some((cat) => state[cat] === undefined);
     },
 
     enqueue(event: JctEvent) {

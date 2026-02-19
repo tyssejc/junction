@@ -156,6 +156,16 @@ describe("ConsentManager", () => {
       // analytics is undefined (not set)
       expect(manager.isAllowed(["analytics"])).toBe(false);
     });
+
+    it("always allows exempt-only requirements", () => {
+      manager = createConsentManager(makeConfig());
+      expect(manager.isAllowed(["exempt"])).toBe(true);
+    });
+
+    it("allows mixed exempt + necessary", () => {
+      manager = createConsentManager(makeConfig());
+      expect(manager.isAllowed(["necessary", "exempt"])).toBe(true);
+    });
   });
 
   describe("isPending", () => {
@@ -177,6 +187,17 @@ describe("ConsentManager", () => {
       manager.setState({ analytics: true });
 
       expect(manager.isPending(["analytics", "marketing"])).toBe(true);
+    });
+
+    it("exempt categories are never pending", () => {
+      manager = createConsentManager(makeConfig());
+      expect(manager.isPending(["exempt"])).toBe(false);
+    });
+
+    it("filters exempt from mixed pending check", () => {
+      manager = createConsentManager(makeConfig());
+      // analytics is undefined (pending), exempt should be ignored
+      expect(manager.isPending(["exempt", "analytics"])).toBe(true);
     });
   });
 

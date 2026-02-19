@@ -122,7 +122,14 @@ export type EventSource = {
  * because CMPs think in categories. This maps directly to OneTrust, Cookiebot,
  * Usercentrics, etc.
  */
-export type ConsentCategory = "necessary" | "analytics" | "marketing" | "personalization" | "social" | string; // extensible for custom categories
+export type ConsentCategory =
+  | "necessary"
+  | "analytics"
+  | "marketing"
+  | "personalization"
+  | "social"
+  | "exempt"
+  | string; // extensible for custom categories
 
 export type ConsentState = Partial<Record<ConsentCategory, boolean>>;
 
