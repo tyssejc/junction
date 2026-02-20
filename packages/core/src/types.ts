@@ -85,6 +85,12 @@ export interface EventContext {
     count: number;
   };
 
+  /** Consent state snapshot at the time this event was created. */
+  consent?: ConsentState;
+
+  /** True if this event was queued while consent was pending, then dispatched after consent resolved. */
+  was_queued?: boolean;
+
   /** Arbitrary context extensions */
   [key: string]: unknown;
 }

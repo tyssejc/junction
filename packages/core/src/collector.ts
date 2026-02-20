@@ -158,7 +158,15 @@ export function createCollector(options: CreateCollectorOptions): Collector {
 
     queueMicrotask(() => {
       for (const { event } of queued) {
-        const updatedEvent = { ...event, user: { ...user } };
+        const updatedEvent = {
+          ...event,
+          user: { ...user },
+          context: {
+            ...event.context,
+            was_queued: true,
+            consent: consent.getState(),
+          },
+        };
         dispatchToDestinations(updatedEvent);
       }
       emit("queue:flush", { count: queued.length });
@@ -190,6 +198,7 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       ...base,
       ...config.globals,
       ...resolved,
+      consent: consent.getState(),
     };
   }
 

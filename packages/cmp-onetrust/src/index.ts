@@ -1,3 +1,4 @@
+import { type CmpBridge, createCmpBridge } from "@junctionjs/core";
 import type { ConsentState } from "@junctionjs/core";
 
 // ─── Types ───────────────────────────────────────────────────────
@@ -120,41 +121,40 @@ export function createOneTrustAdapter(
   const categoryMap = options?.categoryMap ?? {};
   const debug = options?.debug ?? false;
 
-  function readAndSync(): void {
-    const activeGroups = (window as any).OnetrustActiveGroups as string | undefined;
-    if (!activeGroups) {
-      if (debug) {
-        console.log("[Junction:OneTrust] No OnetrustActiveGroups found, staying pending");
-      }
-      return;
-    }
-
-    const state = mapOneTrustGroups(activeGroups, categoryMap);
-    if (debug) {
-      console.log("[Junction:OneTrust] Syncing consent state:", state);
-    }
-    collector.consent(state);
-  }
-
-  function handleConsentUpdate(): void {
-    readAndSync();
-  }
-
-  window.addEventListener("OneTrustGroupsUpdated", handleConsentUpdate);
-
   // Preserve any existing OptanonWrapper set before the adapter was created.
   const existingWrapper = (window as any).OptanonWrapper as ((...args: unknown[]) => void) | undefined;
+
+  function handleConsentUpdate(): void {
+    // The bridge's subscribe callback triggers readAndSync inside the bridge.
+    // But we also need to call the bridge's internal readAndSync from OptanonWrapper.
+    // Since OptanonWrapper is OneTrust-specific, we handle it here and just call bridge.sync().
+    bridge.sync();
+  }
+
   (window as any).OptanonWrapper = (...args: unknown[]) => {
     existingWrapper?.(...args);
     handleConsentUpdate();
   };
 
-  // Immediate sync: returning visitors already have OnetrustActiveGroups set.
-  readAndSync();
+  const bridge: CmpBridge = createCmpBridge<string>({
+    collector,
+    readState: () => {
+      const activeGroups = (window as any).OnetrustActiveGroups as string | undefined;
+      return activeGroups || null;
+    },
+    subscribe: (callback) => {
+      window.addEventListener("OneTrustGroupsUpdated", callback);
+      return () => {
+        window.removeEventListener("OneTrustGroupsUpdated", callback);
+      };
+    },
+    mapState: (activeGroups) => mapOneTrustGroups(activeGroups, categoryMap),
+    debug,
+  });
 
   return {
     destroy() {
-      window.removeEventListener("OneTrustGroupsUpdated", handleConsentUpdate);
+      bridge.destroy();
       // Restore the original OptanonWrapper (or delete it if there was none).
       if (existingWrapper !== undefined) {
         (window as any).OptanonWrapper = existingWrapper;
@@ -163,7 +163,7 @@ export function createOneTrustAdapter(
       }
     },
     sync() {
-      readAndSync();
+      bridge.sync();
     },
   };
 }

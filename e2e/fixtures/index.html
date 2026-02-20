@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Junction E2E Test</title>
+  <script src="/dist/entry.global.js"></script>
+</head>
+<body>
+  <h1>Junction E2E Test Fixture</h1>
+  <script>
+    // ─── Test infrastructure ──────────────────────────────────────
+    window.__TEST__ = { events: [], collector: null };
+
+    /**
+     * Test-sink destination: captures all events into window.__TEST__.events
+     */
+    function createTestSink() {
+      return {
+        name: "test-sink",
+        version: "0.0.1",
+        consent: ["analytics"],
+        runtime: "client",
+        init: function () { return Promise.resolve(); },
+        transform: function (event) { return event; },
+        send: function (payload) {
+          window.__TEST__.events.push(payload);
+          return Promise.resolve();
+        },
+      };
+    }
+
+    /**
+     * Called from Playwright via page.evaluate() to initialize Junction
+     * with a given config.
+     */
+    window.initJunction = function (config) {
+      window.__TEST__.events = [];
+
+      var defaults = {
+        name: "e2e-test",
+        environment: "test",
+        consent: {
+          defaultState: {},
+          queueTimeout: 30000,
+          respectDNT: false,
+          respectGPC: false,
+        },
+        destinations: [
+          { destination: createTestSink(), config: {} },
+        ],
+        debug: false,
+        buffer: { maxSize: 1, maxWait: 100 },
+      };
+
+      // Merge caller config into defaults
+      var merged = Object.assign({}, defaults, config);
+      if (config && config.consent) {
+        merged.consent = Object.assign({}, defaults.consent, config.consent);
+      }
+      if (!config || !config.destinations) {
+        merged.destinations = defaults.destinations;
+      }
+
+      var collector = Junction.createCollector({
+        config: merged,
+        source: { type: "client", name: "e2e-test", version: "0.0.1" },
+      });
+
+      window.__TEST__.collector = collector;
+      return true;
+    };
+  </script>
+</body>
+</html>

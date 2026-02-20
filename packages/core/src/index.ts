@@ -36,3 +36,4 @@ export type {
 export { createCollector, type CreateCollectorOptions } from "./collector.js";
 export { createConsentManager, type ConsentManager } from "./consent.js";
 export { createValidator, schemas, type Validator, type ValidationResult } from "./validation.js";
+export { createCmpBridge, type CmpBridge, type CmpBridgeConfig } from "./cmp-bridge.js";

@@ -568,6 +568,96 @@ describe("Collector", () => {
     });
   });
 
+  describe("consent dimensions", () => {
+    it("includes consent state snapshot in event context", () => {
+      const dest = mockDestination({ consent: ["analytics"] });
+      const options = makeOptions();
+      options.config.consent.defaultState = { analytics: true, marketing: false };
+      options.config.destinations = [{ destination: dest, config: {} }];
+
+      const collector = createCollector(options);
+      collector.track("page", "viewed");
+
+      vi.advanceTimersByTime(3000);
+
+      const event = (dest.transform as any).mock.calls[0][0] as JctEvent;
+      expect(event.context.consent).toEqual({ analytics: true, marketing: false });
+    });
+
+    it("does not include was_queued for non-queued events", () => {
+      const dest = mockDestination({ consent: ["analytics"] });
+      const options = makeOptions();
+      options.config.consent.defaultState = { analytics: true };
+      options.config.destinations = [{ destination: dest, config: {} }];
+
+      const collector = createCollector(options);
+      collector.track("page", "viewed");
+
+      vi.advanceTimersByTime(3000);
+
+      const event = (dest.transform as any).mock.calls[0][0] as JctEvent;
+      expect(event.context.was_queued).toBeUndefined();
+    });
+
+    it("marks queued events with was_queued: true after consent grant", async () => {
+      const dest = mockDestination({ consent: ["analytics"] });
+      const options = makeOptions();
+      options.config.consent.defaultState = {}; // analytics pending
+      options.config.destinations = [{ destination: dest, config: {} }];
+
+      const collector = createCollector(options);
+      collector.track("page", "viewed");
+
+      vi.advanceTimersByTime(3000);
+      expect(dest.transform).not.toHaveBeenCalled();
+
+      collector.consent({ analytics: true });
+      await Promise.resolve();
+
+      const event = (dest.transform as any).mock.calls[0][0] as JctEvent;
+      expect(event.context.was_queued).toBe(true);
+    });
+
+    it("updates consent snapshot on queued events to resolved state", async () => {
+      const dest = mockDestination({ consent: ["analytics"] });
+      const options = makeOptions();
+      options.config.consent.defaultState = {}; // analytics pending
+      options.config.destinations = [{ destination: dest, config: {} }];
+
+      const collector = createCollector(options);
+      collector.track("page", "viewed");
+
+      vi.advanceTimersByTime(3000);
+
+      // Grant consent — the queued event should get the resolved state
+      collector.consent({ analytics: true });
+      await Promise.resolve();
+
+      const event = (dest.transform as any).mock.calls[0][0] as JctEvent;
+      // The consent snapshot should reflect the resolved state, not the original pending state
+      expect(event.context.consent).toEqual({ analytics: true });
+    });
+
+    it("consent snapshot reflects state at track() time, not dispatch time", () => {
+      const dest = mockDestination({ consent: ["analytics"] });
+      const options = makeOptions();
+      options.config.consent.defaultState = { analytics: true, marketing: false };
+      options.config.destinations = [{ destination: dest, config: {} }];
+
+      const collector = createCollector(options);
+      collector.track("page", "viewed");
+
+      // Change consent AFTER track but BEFORE buffer flush
+      collector.consent({ marketing: true });
+
+      vi.advanceTimersByTime(3000);
+
+      const event = (dest.transform as any).mock.calls[0][0] as JctEvent;
+      // Event was built with the state at track() time
+      expect(event.context.consent).toEqual({ analytics: true, marketing: false });
+    });
+  });
+
   describe("consent signals", () => {
     it("calls signal init() during collector creation", async () => {
       const init = vi.fn();
