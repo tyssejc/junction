@@ -147,6 +147,20 @@ export interface ConsentConfig {
 
   /** Whether to respect Global Privacy Control */
   respectGPC: boolean;
+
+  /** Vendor consent protocol signals — fired on every consent state change */
+  signals?: ConsentSignal[];
+}
+
+export interface ConsentSignal {
+  /** Signal identifier (e.g., "google-consent-mode-v2") */
+  name: string;
+  /** Set up the signal (e.g., call gtag("consent", "default", ...)) */
+  init?: () => void;
+  /** Called on every consent state change */
+  update: (state: ConsentState) => void;
+  /** Cleanup on shutdown */
+  teardown?: () => void;
 }
 
 // ─── Destination System ──────────────────────────────────────────

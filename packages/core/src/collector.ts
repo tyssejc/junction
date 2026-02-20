@@ -19,6 +19,7 @@ import type {
   CollectorConfig,
   CollectorEvent,
   CollectorEventHandler,
+  ConsentSignal,
   ConsentState,
   DestinationEntry,
   EventContext,
@@ -71,6 +72,7 @@ export function createCollector(options: CreateCollectorOptions): Collector {
   const destinations = new Map<string, DestinationEntry>();
   const eventListeners = new Map<CollectorEvent, Set<CollectorEventHandler>>();
   const consent: ConsentManager = createConsentManager(config.consent);
+  const signals: ConsentSignal[] = config.consent.signals ?? [];
   const validator: Validator = createValidator();
 
   // Event buffer for batching
@@ -96,8 +98,17 @@ export function createCollector(options: CreateCollectorOptions): Collector {
     destinations.set(entry.destination.name, entry);
   }
 
-  // Initialize destinations asynchronously
+  // Initialize destinations and consent signals asynchronously
   async function initDestinations(): Promise<void> {
+    // Initialize consent signals first
+    for (const signal of signals) {
+      try {
+        signal.init?.();
+      } catch (e) {
+        console.error(`[Junction] Failed to initialize consent signal ${signal.name}:`, e);
+      }
+    }
+
     for (const [name, entry] of destinations) {
       try {
         await entry.destination.init(entry.config);
@@ -119,6 +130,15 @@ export function createCollector(options: CreateCollectorOptions): Collector {
 
   consent.onChange((state, _previous) => {
     emit("consent", { state });
+
+    // Fire consent signals before destination callbacks
+    for (const signal of signals) {
+      try {
+        signal.update(state);
+      } catch (e) {
+        console.error(`[Junction] Consent signal ${signal.name} update failed:`, e);
+      }
+    }
 
     // Notify destinations of consent change
     for (const [, entry] of destinations) {
@@ -333,6 +353,13 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       await collector.flush();
       for (const [, entry] of destinations) {
         await entry.destination.teardown?.();
+      }
+      for (const signal of signals) {
+        try {
+          await signal.teardown?.();
+        } catch (e) {
+          console.error(`[Junction] Consent signal ${signal.name} teardown failed:`, e);
+        }
       }
       if (flushTimer) clearTimeout(flushTimer);
     },

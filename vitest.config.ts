@@ -21,6 +21,7 @@ export default defineConfig({
       "@junctionjs/destination-amplitude": path.resolve(__dirname, "packages/destination-amplitude/src"),
       "@junctionjs/destination-ga4": path.resolve(__dirname, "packages/destination-ga4/src"),
       "@junctionjs/destination-meta": path.resolve(__dirname, "packages/destination-meta/src"),
+      "@junctionjs/cmp-onetrust": path.resolve(__dirname, "packages/cmp-onetrust/src"),
     },
   },
 });

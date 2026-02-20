@@ -14,6 +14,7 @@ export type {
   ConsentState,
   ConsentCategory,
   ConsentConfig,
+  ConsentSignal,
   ConsentStatus,
   Destination,
   DestinationEntry,

@@ -11,7 +11,7 @@
  * The event_id field is shared between pixel and CAPI for deduplication.
  */
 
-import type { ConsentState, Destination, JctEvent } from "@junctionjs/core";
+import type { ConsentSignal, ConsentState, Destination, JctEvent } from "@junctionjs/core";
 
 // ─── Configuration ───────────────────────────────────────────────
 
@@ -164,6 +164,30 @@ function loadPixel(pixelId: string): void {
   (window as any).fbq("init", pixelId);
 }
 
+// ─── Consent Signal ──────────────────────────────────────────────
+
+/**
+ * Meta consent signal factory.
+ * Manages fbq consent state centrally via Junction's consent signals.
+ *
+ * @deprecated The Meta destination's built-in `onConsent()` handles this.
+ * Prefer using this signal for centralized consent management.
+ */
+export function metaConsent(): ConsentSignal {
+  return {
+    name: "meta-consent",
+    update(state) {
+      if (typeof window !== "undefined" && typeof (window as any).fbq === "function") {
+        if (state.marketing === false) {
+          (window as any).fbq("consent", "revoke");
+        } else if (state.marketing === true) {
+          (window as any).fbq("consent", "grant");
+        }
+      }
+    },
+  };
+}
+
 // ─── Destination Export ──────────────────────────────────────────
 
 interface MetaPayload {
@@ -237,6 +261,7 @@ export const meta: Destination<MetaConfig> = {
     }
   },
 
+  /** @deprecated Use the `metaConsent()` signal for centralized consent management. */
   onConsent(state: ConsentState) {
     // Meta doesn't have a formal consent mode like Google,
     // but we can revoke pixel if marketing consent is denied

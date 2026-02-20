@@ -10,7 +10,7 @@
  * changes, we update gtag's consent settings automatically.
  */
 
-import type { ConsentState, Destination, JctEvent } from "@junctionjs/core";
+import type { ConsentSignal, ConsentState, Destination, JctEvent } from "@junctionjs/core";
 
 // ─── Configuration ───────────────────────────────────────────────
 
@@ -65,6 +65,39 @@ function mapConsentToGoogle(state: ConsentState): Record<string, "granted" | "de
     personalization_storage: state.personalization ? "granted" : "denied",
     functionality_storage: state.necessary !== false ? "granted" : "denied",
     security_storage: "granted", // always granted
+  };
+}
+
+/**
+ * Returns a ConsentSignal that integrates Google Consent Mode v2.
+ *
+ * Use this signal with Junction's consent manager instead of enabling
+ * `consentMode: true` on the ga4 destination directly. The signal sets
+ * default denied states via `gtag("consent", "default", ...)` during `init`,
+ * then updates them via `gtag("consent", "update", ...)` when consent changes.
+ *
+ * @example
+ * junction.consent.addSignal(googleConsentMode({ waitForUpdate: 500 }));
+ */
+export function googleConsentMode(options?: { waitForUpdate?: number }): ConsentSignal {
+  return {
+    name: "google-consent-mode-v2",
+    init() {
+      if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+        (window as any).gtag("consent", "default", {
+          analytics_storage: "denied",
+          ad_storage: "denied",
+          ad_user_data: "denied",
+          ad_personalization: "denied",
+          ...(options?.waitForUpdate ? { wait_for_update: options.waitForUpdate } : {}),
+        });
+      }
+    },
+    update(state: ConsentState) {
+      if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+        (window as any).gtag("consent", "update", mapConsentToGoogle(state));
+      }
+    },
   };
 }
 
@@ -175,6 +208,12 @@ function loadGtag(measurementId: string, gtagUrl?: string): void {
 
 // ─── Destination Export ──────────────────────────────────────────
 
+/**
+ * Tracks whether Google Consent Mode is enabled for this destination instance.
+ * Set during init() to avoid double-firing when users adopt the googleConsentMode signal.
+ */
+let consentModeEnabled = false;
+
 export const ga4: Destination<GA4Config> = {
   name: "ga4",
   description: "Google Analytics 4",
@@ -198,6 +237,8 @@ export const ga4: Destination<GA4Config> = {
 
       (window as any).gtag?.("config", config.measurementId, gtagConfig);
     }
+
+    consentModeEnabled = config.consentMode === true;
   },
 
   transform(event: JctEvent) {
@@ -231,6 +272,8 @@ export const ga4: Destination<GA4Config> = {
   },
 
   onConsent(state: ConsentState) {
+    if (!consentModeEnabled) return;
+
     // Update Google Consent Mode
     if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
       (window as any).gtag("consent", "update", mapConsentToGoogle(state));

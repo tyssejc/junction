@@ -497,4 +497,146 @@ describe("Collector", () => {
       expect(goodDest.send).toHaveBeenCalled();
     });
   });
+
+  describe("consent signals", () => {
+    it("calls signal init() during collector creation", async () => {
+      const init = vi.fn();
+      const options = makeOptions();
+      options.config.consent.signals = [{ name: "test-signal", init, update: vi.fn() }];
+
+      createCollector(options);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(init).toHaveBeenCalledTimes(1);
+    });
+
+    it("calls signal update() on every collector.consent() change", () => {
+      const update = vi.fn();
+      const options = makeOptions();
+      options.config.consent.signals = [{ name: "test-signal", update }];
+
+      const collector = createCollector(options);
+      collector.consent({ analytics: true });
+
+      expect(update).toHaveBeenCalledTimes(1);
+      expect(update).toHaveBeenCalledWith({ analytics: true });
+    });
+
+    it("calls signal update() before destination onConsent()", () => {
+      const callOrder: string[] = [];
+
+      const dest = mockDestination({
+        onConsent: vi.fn(() => {
+          callOrder.push("destination");
+        }),
+      });
+      const options = makeOptions();
+      options.config.destinations = [{ destination: dest, config: {} }];
+      options.config.consent.signals = [
+        {
+          name: "test-signal",
+          update: vi.fn(() => {
+            callOrder.push("signal");
+          }),
+        },
+      ];
+
+      const collector = createCollector(options);
+      collector.consent({ analytics: true });
+
+      expect(callOrder).toEqual(["signal", "destination"]);
+    });
+
+    it("calls signal update() before queued events are dispatched", () => {
+      const callOrder: string[] = [];
+
+      const dest = mockDestination({
+        consent: ["analytics"],
+        transform: vi.fn((event) => {
+          callOrder.push("destination");
+          return { transformed: true, event };
+        }),
+      });
+      const options = makeOptions();
+      options.config.consent.defaultState = {}; // analytics pending
+      options.config.destinations = [{ destination: dest, config: {} }];
+      options.config.consent.signals = [
+        {
+          name: "test-signal",
+          update: vi.fn(() => {
+            callOrder.push("signal");
+          }),
+        },
+      ];
+
+      const collector = createCollector(options);
+
+      // Track an event while consent is pending — it gets queued
+      collector.track("page", "viewed");
+      vi.advanceTimersByTime(3000);
+      expect(dest.transform).not.toHaveBeenCalled();
+
+      // Grant consent — signal update should fire, then queued event dispatched
+      collector.consent({ analytics: true });
+
+      expect(callOrder).toEqual(["signal", "destination"]);
+    });
+
+    it("signal errors do not prevent other signals or destinations from running", () => {
+      const secondUpdate = vi.fn();
+      const onConsent = vi.fn();
+
+      const dest = mockDestination({ onConsent });
+      const options = makeOptions();
+      options.config.destinations = [{ destination: dest, config: {} }];
+      options.config.consent.signals = [
+        {
+          name: "broken-signal",
+          update: vi.fn(() => {
+            throw new Error("signal boom");
+          }),
+        },
+        {
+          name: "good-signal",
+          update: secondUpdate,
+        },
+      ];
+
+      const collector = createCollector(options);
+      collector.consent({ analytics: true });
+
+      expect(secondUpdate).toHaveBeenCalledTimes(1);
+      expect(onConsent).toHaveBeenCalledTimes(1);
+    });
+
+    it("calls signal teardown() on collector.shutdown()", async () => {
+      const teardown = vi.fn();
+      const options = makeOptions();
+      options.config.consent.signals = [{ name: "test-signal", update: vi.fn(), teardown }];
+
+      const collector = createCollector(options);
+      await collector.shutdown();
+
+      expect(teardown).toHaveBeenCalledTimes(1);
+    });
+
+    it("works with no signals configured (backward compat)", () => {
+      const dest = mockDestination();
+      const options = makeOptions();
+      // Explicitly omit signals from consent config
+      options.config.consent = {
+        defaultState: { analytics: true },
+        queueTimeout: 30_000,
+        respectDNT: false,
+        respectGPC: false,
+        // signals intentionally absent
+      };
+      options.config.destinations = [{ destination: dest, config: {} }];
+
+      const collector = createCollector(options);
+
+      expect(() => collector.consent({ analytics: false })).not.toThrow();
+      expect(dest.onConsent).toHaveBeenCalledWith({ analytics: false });
+    });
+  });
 });
