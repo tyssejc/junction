@@ -50,6 +50,9 @@ export interface ConsentManager {
 
   /** Number of queued events */
   queueSize: () => number;
+
+  /** Clean up timers (cleanup interval, fallback timer) */
+  destroy: () => void;
 }
 
 // ─── Implementation ──────────────────────────────────────────────
@@ -72,7 +75,7 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
   // Queue cleanup timer — expire old events
   let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
-  if (config.queueTimeout > 0) {
+  if (!config.strictMode && config.queueTimeout > 0) {
     _cleanupTimer = setInterval(
       () => {
         const now = Date.now();
@@ -81,6 +84,10 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
       Math.min(config.queueTimeout, 30_000),
     );
   }
+
+  // Fallback timer — fire if no consent update arrives within timeout
+  let _fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+  let _consentReceived = false;
 
   function notify(previous: ConsentState): void {
     for (const listener of listeners) {
@@ -98,6 +105,12 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
     },
 
     setState(update: ConsentState) {
+      _consentReceived = true;
+      if (_fallbackTimer) {
+        clearTimeout(_fallbackTimer);
+        _fallbackTimer = null;
+      }
+
       const previous = { ...state };
 
       // Merge — don't replace. This allows incremental consent updates
@@ -125,6 +138,8 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
     },
 
     isPending(categories: ConsentCategory[]): boolean {
+      // In strict mode, pending = denied — no queuing allowed
+      if (config.strictMode) return false;
       // A category is "pending" if it hasn't been explicitly set to true or false
       // "necessary" and "exempt" categories are never pending
       return categories
@@ -133,7 +148,7 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
     },
 
     enqueue(event: JctEvent) {
-      if (config.queueTimeout === 0) return; // queuing disabled
+      if (config.strictMode || config.queueTimeout === 0) return;
       queue.push({ event, queuedAt: Date.now() });
     },
 
@@ -153,7 +168,27 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
     queueSize() {
       return queue.length;
     },
+
+    destroy() {
+      if (_cleanupTimer) {
+        clearInterval(_cleanupTimer);
+        _cleanupTimer = null;
+      }
+      if (_fallbackTimer) {
+        clearTimeout(_fallbackTimer);
+        _fallbackTimer = null;
+      }
+    },
   };
+
+  // Set up fallback timer after manager is created (needs manager.setState)
+  if (config.consentFallback && config.consentFallback.timeout > 0) {
+    _fallbackTimer = setTimeout(() => {
+      if (!_consentReceived) {
+        manager.setState(config.consentFallback!.state);
+      }
+    }, config.consentFallback.timeout);
+  }
 
   return manager;
 }

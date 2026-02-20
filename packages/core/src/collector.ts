@@ -131,7 +131,7 @@ export function createCollector(options: CreateCollectorOptions): Collector {
   consent.onChange((state, _previous) => {
     emit("consent", { state });
 
-    // Fire consent signals before destination callbacks
+    // Fire consent signals (synchronous — vendors need this immediately)
     for (const signal of signals) {
       try {
         signal.update(state);
@@ -140,24 +140,29 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       }
     }
 
-    // Notify destinations of consent change
+    // Notify destinations of consent change (synchronous)
     for (const [, entry] of destinations) {
       entry.destination.onConsent?.(state);
     }
 
-    // Drain queued events and re-dispatch
+    // Drain queued events asynchronously to avoid blocking the main thread
     const queued = consent.drain();
-    if (queued.length > 0 && config.debug) {
+    if (queued.length === 0) {
+      emit("queue:flush", { count: 0 });
+      return;
+    }
+
+    if (config.debug) {
       console.log(`[Junction] Flushing ${queued.length} queued events after consent change`);
     }
 
-    for (const { event } of queued) {
-      // Update user properties on queued events (may have changed since queuing)
-      const updatedEvent = { ...event, user: { ...user } };
-      dispatchToDestinations(updatedEvent);
-    }
-
-    emit("queue:flush", { count: queued.length });
+    queueMicrotask(() => {
+      for (const { event } of queued) {
+        const updatedEvent = { ...event, user: { ...user } };
+        dispatchToDestinations(updatedEvent);
+      }
+      emit("queue:flush", { count: queued.length });
+    });
   });
 
   // ── Internal helpers ───────────────────────────────────
@@ -361,6 +366,7 @@ export function createCollector(options: CreateCollectorOptions): Collector {
           console.error(`[Junction] Consent signal ${signal.name} teardown failed:`, e);
         }
       }
+      consent.destroy();
       if (flushTimer) clearTimeout(flushTimer);
     },
   };

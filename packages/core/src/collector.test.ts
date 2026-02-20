@@ -253,7 +253,7 @@ describe("Collector", () => {
       expect(dest.transform).not.toHaveBeenCalled();
     });
 
-    it("queues events when consent is pending, dispatches after grant", () => {
+    it("queues events when consent is pending, dispatches after grant", async () => {
       const dest = mockDestination({ consent: ["analytics"] });
       const options = makeOptions();
       options.config.consent.defaultState = {}; // analytics is undefined = pending
@@ -268,11 +268,13 @@ describe("Collector", () => {
       // Grant consent
       collector.consent({ analytics: true });
 
-      // The consent change handler should drain the queue and dispatch
+      // Queue drain is now async via queueMicrotask
+      await Promise.resolve();
+
       expect(dest.transform).toHaveBeenCalledTimes(1);
     });
 
-    it("drops queued events when consent is denied", () => {
+    it("drops queued events when consent is denied", async () => {
       const dest = mockDestination({ consent: ["marketing"] });
       const options = makeOptions();
       options.config.consent.defaultState = {}; // pending
@@ -286,12 +288,80 @@ describe("Collector", () => {
       // Deny consent
       collector.consent({ marketing: false });
 
-      // The queue drains, but the destination should still not receive
-      // because marketing is now false. Queue drains and re-dispatches,
-      // but isAllowed returns false.
-      // Note: the current implementation drains unconditionally and re-dispatches.
-      // dispatchToDestinations will check consent again.
+      // Queue drain is async
+      await Promise.resolve();
+
       expect(dest.send).not.toHaveBeenCalled();
+    });
+
+    it("strictMode drops events for pending categories (not queued, not dispatched)", () => {
+      const dest = mockDestination({ consent: ["analytics"] });
+      const options = makeOptions();
+      options.config.consent = {
+        defaultState: {}, // analytics is pending
+        queueTimeout: 30_000,
+        respectDNT: false,
+        respectGPC: false,
+        strictMode: true,
+      };
+      options.config.destinations = [{ destination: dest, config: {} }];
+
+      const collector = createCollector(options);
+      collector.track("page", "viewed");
+
+      vi.advanceTimersByTime(3000);
+      // In strictMode, pending = denied, so events are neither queued nor dispatched
+      expect(dest.transform).not.toHaveBeenCalled();
+      expect(dest.send).not.toHaveBeenCalled();
+    });
+
+    it("strictMode still dispatches to destinations with explicitly granted consent", () => {
+      const dest = mockDestination({ consent: ["analytics"] });
+      const options = makeOptions();
+      options.config.consent = {
+        defaultState: { analytics: true }, // explicitly granted
+        queueTimeout: 30_000,
+        respectDNT: false,
+        respectGPC: false,
+        strictMode: true,
+      };
+      options.config.destinations = [{ destination: dest, config: {} }];
+
+      const collector = createCollector(options);
+      collector.track("page", "viewed");
+
+      vi.advanceTimersByTime(3000);
+      expect(dest.transform).toHaveBeenCalledTimes(1);
+      expect(dest.send).toHaveBeenCalledTimes(1);
+    });
+
+    it("queue:flush event fires after async drain completes", async () => {
+      const dest = mockDestination({ consent: ["analytics"] });
+      const options = makeOptions();
+      options.config.consent.defaultState = {}; // pending
+      options.config.destinations = [{ destination: dest, config: {} }];
+
+      const collector = createCollector(options);
+      const flushHandler = vi.fn();
+      collector.on("queue:flush", flushHandler);
+
+      collector.track("page", "viewed");
+      vi.advanceTimersByTime(3000);
+
+      collector.consent({ analytics: true });
+
+      // queue:flush should NOT have fired yet (async drain)
+      expect(flushHandler).not.toHaveBeenCalledWith(expect.objectContaining({ payload: { count: 1 } }));
+
+      // Flush microtask
+      await Promise.resolve();
+
+      expect(flushHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "queue:flush",
+          payload: { count: 1 },
+        }),
+      );
     });
   });
 
@@ -547,7 +617,7 @@ describe("Collector", () => {
       expect(callOrder).toEqual(["signal", "destination"]);
     });
 
-    it("calls signal update() before queued events are dispatched", () => {
+    it("calls signal update() before queued events are dispatched", async () => {
       const callOrder: string[] = [];
 
       const dest = mockDestination({
@@ -576,8 +646,14 @@ describe("Collector", () => {
       vi.advanceTimersByTime(3000);
       expect(dest.transform).not.toHaveBeenCalled();
 
-      // Grant consent — signal update should fire, then queued event dispatched
+      // Grant consent — signal update should fire synchronously, then queued event dispatched in microtask
       collector.consent({ analytics: true });
+
+      // Signal fires synchronously
+      expect(callOrder).toEqual(["signal"]);
+
+      // Destination dispatch happens in microtask
+      await Promise.resolve();
 
       expect(callOrder).toEqual(["signal", "destination"]);
     });

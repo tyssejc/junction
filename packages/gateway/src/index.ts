@@ -27,11 +27,14 @@
 import {
   type Collector,
   type CollectorConfig,
+  type ConsentState,
   type DestinationEntry,
   type EventSource,
   type JctEvent,
   createCollector,
 } from "@junctionjs/core";
+
+export type { ConsentState } from "@junctionjs/core";
 
 // ─── Gateway Configuration ───────────────────────────────────────
 
@@ -188,7 +191,10 @@ export function createGateway(config: GatewayConfig): Gateway {
     }
 
     try {
-      const body = (await request.json()) as { events?: JctEvent[] };
+      const body = (await request.json()) as {
+        events?: JctEvent[];
+        consent?: ConsentState;
+      };
       const events = body.events;
 
       if (!Array.isArray(events) || events.length === 0) {
@@ -196,6 +202,15 @@ export function createGateway(config: GatewayConfig): Gateway {
           status: 400,
           headers: { ...corsHeaders(request), "Content-Type": "application/json" },
         });
+      }
+
+      // Apply client-reported consent state before tracking events
+      if (body.consent) {
+        collector.consent(body.consent);
+
+        if (config.collector.debug) {
+          console.log("[Junction:Gateway] Applied client consent state:", body.consent);
+        }
       }
 
       // Enrich with server context and forward to collector

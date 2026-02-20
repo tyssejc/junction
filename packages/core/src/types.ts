@@ -150,6 +150,27 @@ export interface ConsentConfig {
 
   /** Vendor consent protocol signals — fired on every consent state change */
   signals?: ConsentSignal[];
+
+  /**
+   * Strict GDPR mode. When true:
+   * - Event queuing is disabled (pending = denied)
+   * - Events only dispatch to destinations with explicitly granted consent
+   * Overrides queueTimeout. Use this for GDPR-strict deployments where
+   * any pre-consent data collection may be considered "processing."
+   */
+  strictMode?: boolean;
+
+  /**
+   * Fallback consent state applied when no CMP responds within the timeout.
+   * Handles ~15-20% of privacy-conscious users who block CMP scripts.
+   * If not set, consent stays pending until queueTimeout expires (events drop).
+   */
+  consentFallback?: {
+    /** How long (ms) to wait for a CMP before applying fallback state */
+    timeout: number;
+    /** The consent state to apply as fallback */
+    state: ConsentState;
+  };
 }
 
 export interface ConsentSignal {

@@ -338,4 +338,122 @@ describe("ConsentManager", () => {
       });
     });
   });
+
+  describe("strictMode", () => {
+    it("disables event queuing (enqueue is a no-op)", () => {
+      manager = createConsentManager(makeConfig({ strictMode: true, queueTimeout: 30_000 }));
+      manager.enqueue(makeEvent());
+      expect(manager.queueSize()).toBe(0);
+    });
+
+    it("makes isPending() return false (pending = denied)", () => {
+      manager = createConsentManager(makeConfig({ strictMode: true }));
+      // analytics is undefined, but strictMode treats pending as denied
+      expect(manager.isPending(["analytics"])).toBe(false);
+    });
+
+    it("overrides queueTimeout (even if queueTimeout > 0, no queuing)", () => {
+      manager = createConsentManager(makeConfig({ strictMode: true, queueTimeout: 60_000 }));
+      manager.enqueue(makeEvent({ id: "evt-strict-1" }));
+      manager.enqueue(makeEvent({ id: "evt-strict-2" }));
+      expect(manager.queueSize()).toBe(0);
+      expect(manager.drain()).toEqual([]);
+    });
+
+    it("still allows isAllowed() to pass for explicitly granted categories", () => {
+      manager = createConsentManager(makeConfig({ strictMode: true, defaultState: { analytics: true } }));
+      expect(manager.isAllowed(["analytics"])).toBe(true);
+    });
+  });
+
+  describe("consentFallback", () => {
+    it("applies fallback state after timeout when no consent received", () => {
+      const listener = vi.fn();
+      manager = createConsentManager(
+        makeConfig({
+          consentFallback: {
+            timeout: 3000,
+            state: { analytics: false, marketing: false },
+          },
+        }),
+      );
+      manager.onChange(listener);
+
+      // Advance past fallback timeout
+      vi.advanceTimersByTime(3500);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(manager.getState()).toEqual({ analytics: false, marketing: false });
+    });
+
+    it("cancels fallback timer when setState() is called before timeout", () => {
+      const listener = vi.fn();
+      manager = createConsentManager(
+        makeConfig({
+          consentFallback: {
+            timeout: 5000,
+            state: { analytics: false, marketing: false },
+          },
+        }),
+      );
+      manager.onChange(listener);
+
+      // CMP responds before fallback fires
+      manager.setState({ analytics: true, marketing: true });
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      // Advance past fallback timeout — should NOT fire again
+      vi.advanceTimersByTime(6000);
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(manager.getState()).toEqual({ analytics: true, marketing: true });
+    });
+
+    it("does not apply fallback when not configured", () => {
+      const listener = vi.fn();
+      manager = createConsentManager(makeConfig());
+      manager.onChange(listener);
+
+      vi.advanceTimersByTime(60_000);
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it("fallback triggers onChange listeners normally", () => {
+      const listener = vi.fn();
+      manager = createConsentManager(
+        makeConfig({
+          defaultState: { necessary: true },
+          consentFallback: {
+            timeout: 2000,
+            state: { analytics: false },
+          },
+        }),
+      );
+      manager.onChange(listener);
+
+      vi.advanceTimersByTime(2500);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      // previous state was { necessary: true }, new state merges fallback
+      expect(listener).toHaveBeenCalledWith({ necessary: true, analytics: false }, { necessary: true });
+    });
+
+    it("destroy() cleans up fallback timer", () => {
+      const listener = vi.fn();
+      manager = createConsentManager(
+        makeConfig({
+          consentFallback: {
+            timeout: 3000,
+            state: { analytics: false },
+          },
+        }),
+      );
+      manager.onChange(listener);
+
+      manager.destroy();
+      vi.advanceTimersByTime(5000);
+
+      // Fallback should NOT have fired
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
 });
