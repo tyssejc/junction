@@ -36,6 +36,7 @@ function rateMetric(name: MetricName, value: number): "good" | "needs-improvemen
 export function collectWebVitals(collector: Trackable, options: WebVitalsOptions = {}): TeardownFn {
   const metrics = options.metrics ?? ALL_METRICS;
   const observers: PerformanceObserver[] = [];
+  const cleanups: (() => void)[] = [];
 
   function report(name: MetricName, value: number): void {
     collector.track("performance", "measured", {
@@ -62,12 +63,14 @@ export function collectWebVitals(collector: Trackable, options: WebVitalsOptions
 
       // Report CLS on page hide (it accumulates over time)
       const reportCLS = () => report("CLS", clsValue);
-      document.addEventListener("visibilitychange", function onHide() {
+      function onCLSHide() {
         if (document.visibilityState === "hidden") {
           reportCLS();
-          document.removeEventListener("visibilitychange", onHide);
+          document.removeEventListener("visibilitychange", onCLSHide);
         }
-      });
+      }
+      document.addEventListener("visibilitychange", onCLSHide);
+      cleanups.push(() => document.removeEventListener("visibilitychange", onCLSHide));
     } catch {
       // PerformanceObserver or layout-shift not supported
     }
@@ -89,12 +92,14 @@ export function collectWebVitals(collector: Trackable, options: WebVitalsOptions
       const reportLCP = () => {
         if (lcpValue > 0) report("LCP", lcpValue);
       };
-      document.addEventListener("visibilitychange", function onHide() {
+      function onLCPHide() {
         if (document.visibilityState === "hidden") {
           reportLCP();
-          document.removeEventListener("visibilitychange", onHide);
+          document.removeEventListener("visibilitychange", onLCPHide);
         }
-      });
+      }
+      document.addEventListener("visibilitychange", onLCPHide);
+      cleanups.push(() => document.removeEventListener("visibilitychange", onLCPHide));
     } catch {
       // Not supported
     }
@@ -115,14 +120,16 @@ export function collectWebVitals(collector: Trackable, options: WebVitalsOptions
       observers.push(observer);
 
       // INP is the highest interaction duration (98th percentile)
-      document.addEventListener("visibilitychange", function onHide() {
+      function onINPHide() {
         if (document.visibilityState === "hidden" && interactions.length > 0) {
           interactions.sort((a, b) => b - a);
           const idx = Math.min(Math.floor(interactions.length * 0.02), interactions.length - 1);
           report("INP", interactions[idx]);
-          document.removeEventListener("visibilitychange", onHide);
+          document.removeEventListener("visibilitychange", onINPHide);
         }
-      });
+      }
+      document.addEventListener("visibilitychange", onINPHide);
+      cleanups.push(() => document.removeEventListener("visibilitychange", onINPHide));
     } catch {
       // Not supported
     }
@@ -134,7 +141,7 @@ export function collectWebVitals(collector: Trackable, options: WebVitalsOptions
       const observer = new PerformanceObserver((list) => {
         const entry = list.getEntries()[0] as PerformanceNavigationTiming | undefined;
         if (entry) {
-          report("TTFB", entry.responseStart - entry.requestStart);
+          report("TTFB", entry.responseStart - entry.startTime);
           observer.disconnect();
         }
       });
@@ -167,6 +174,9 @@ export function collectWebVitals(collector: Trackable, options: WebVitalsOptions
   return () => {
     for (const observer of observers) {
       observer.disconnect();
+    }
+    for (const cleanup of cleanups) {
+      cleanup();
     }
   };
 }
