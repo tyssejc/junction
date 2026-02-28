@@ -93,7 +93,7 @@ export function plausible(config: PlausibleConfig): Destination<PlausibleConfig>
       }
     },
 
-    transform(event: JctEvent): PlausiblePayload | null {
+    transform(event: JctEvent, _config: PlausibleConfig): PlausiblePayload | null {
       const nameMapper = config.eventName ?? defaultEventName;
       const name = nameMapper(event);
       if (name == null) return null;

@@ -231,7 +231,7 @@ export function createCollector(options: CreateCollectorOptions): Collector {
 
       // Transform
       try {
-        const payload = entry.destination.transform(event);
+        const payload = entry.destination.transform(event, entry.config);
         if (payload == null) continue; // destination chose to skip this event
 
         // Send asynchronously

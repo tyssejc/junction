@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/client",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Browser runtime for Junction — anonymous IDs, sessions, auto page views, View Transitions",
   "type": "module",
   "main": "dist/index.js",

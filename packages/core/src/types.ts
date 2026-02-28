@@ -229,7 +229,7 @@ export interface Destination<TConfig = Record<string, unknown>> {
    * This replaces walkerOS's "mapping" concept. It's just a function —
    * you can use whatever logic you want.
    */
-  transform: (event: JctEvent) => unknown | null | undefined;
+  transform: (event: JctEvent, config: TConfig) => unknown | null | undefined;
 
   /**
    * Send transformed event(s) to the destination.

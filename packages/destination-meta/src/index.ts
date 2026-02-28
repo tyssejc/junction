@@ -214,10 +214,10 @@ export const meta: Destination<MetaConfig> = {
     }
   },
 
-  transform(event: JctEvent): MetaPayload | null {
+  transform(event: JctEvent, config: MetaConfig): MetaPayload | null {
     if (event.entity === "_system") return null;
 
-    const eventName = getMetaEventName(event, {} as MetaConfig);
+    const eventName = getMetaEventName(event, config);
     const params = mapToMetaParams(event);
 
     return {

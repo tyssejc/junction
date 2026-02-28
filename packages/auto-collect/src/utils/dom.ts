@@ -88,14 +88,39 @@ export function isDownloadUrl(href: string, extensions: string[]): boolean {
   }
 }
 
-/** Simple throttle that drops calls within the interval */
+/** Throttle with leading and trailing edge execution */
 export function throttle<T extends (...args: any[]) => void>(fn: T, ms: number): T {
   let last = 0;
+  let trailingTimer: ReturnType<typeof setTimeout> | null = null;
+  let trailingArgs: any[] | null = null;
+
   return ((...args: any[]) => {
     const now = Date.now();
+
     if (now - last >= ms) {
+      // Leading edge: execute immediately
+      if (trailingTimer) {
+        clearTimeout(trailingTimer);
+        trailingTimer = null;
+      }
       last = now;
       fn(...args);
+    } else {
+      // Schedule trailing edge: fire after the throttle window expires
+      trailingArgs = args;
+      if (!trailingTimer) {
+        trailingTimer = setTimeout(
+          () => {
+            last = Date.now();
+            trailingTimer = null;
+            if (trailingArgs) {
+              fn(...trailingArgs);
+              trailingArgs = null;
+            }
+          },
+          ms - (now - last),
+        );
+      }
     }
   }) as T;
 }

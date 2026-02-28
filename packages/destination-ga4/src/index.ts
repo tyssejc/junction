@@ -177,12 +177,16 @@ function mapParameters(properties: Record<string, unknown>, config: GA4Config): 
 interface GA4Payload {
   eventName: string;
   parameters: Record<string, unknown>;
+  clientId: string;
+  userId?: string;
 }
 
 function transformEvent(event: JctEvent, config: GA4Config): GA4Payload {
   return {
     eventName: getGA4EventName(event, config),
     parameters: mapParameters(event.properties, config),
+    clientId: event.user.anonymousId,
+    userId: event.user.userId,
   };
 }
 
@@ -206,79 +210,85 @@ function loadGtag(measurementId: string, gtagUrl?: string): void {
   document.head.appendChild(script);
 }
 
-// ─── Destination Export ──────────────────────────────────────────
+// ─── Destination Factory ─────────────────────────────────────────
 
 /**
- * Tracks whether Google Consent Mode is enabled for this destination instance.
- * Set during init() to avoid double-firing when users adopt the googleConsentMode signal.
+ * Create a GA4 destination instance.
+ * Each instance has its own consent mode state, avoiding shared module-level flags.
  */
-let consentModeEnabled = false;
+export function createGA4(): Destination<GA4Config> {
+  let consentModeEnabled = false;
 
-export const ga4: Destination<GA4Config> = {
-  name: "ga4",
-  description: "Google Analytics 4",
-  version: "0.1.0",
-  consent: ["analytics"],
-  runtime: "both",
+  return {
+    name: "ga4",
+    description: "Google Analytics 4",
+    version: "0.1.0",
+    consent: ["analytics"],
+    runtime: "both",
 
-  init(config: GA4Config) {
-    if (!config.measurementId) {
-      throw new Error("[Junction:GA4] measurementId is required");
-    }
+    init(config: GA4Config) {
+      if (!config.measurementId) {
+        throw new Error("[Junction:GA4] measurementId is required");
+      }
 
-    // Client-side: load gtag.js if needed
-    if (typeof window !== "undefined" && config.loadScript !== false) {
-      loadGtag(config.measurementId, config.gtagUrl);
+      // Client-side: load gtag.js if needed
+      if (typeof window !== "undefined" && config.loadScript !== false) {
+        loadGtag(config.measurementId, config.gtagUrl);
 
-      // Configure GA4
-      const gtagConfig: Record<string, unknown> = {
-        send_page_view: config.sendPageView ?? false,
-      };
+        // Configure GA4
+        const gtagConfig: Record<string, unknown> = {
+          send_page_view: config.sendPageView ?? false,
+        };
 
-      (window as any).gtag?.("config", config.measurementId, gtagConfig);
-    }
+        (window as any).gtag?.("config", config.measurementId, gtagConfig);
+      }
 
-    consentModeEnabled = config.consentMode === true;
-  },
+      consentModeEnabled = config.consentMode === true;
+    },
 
-  transform(event: JctEvent) {
-    if (event.entity === "_system") return null;
-    return transformEvent(event, {} as GA4Config);
-  },
+    transform(event: JctEvent, config: GA4Config) {
+      if (event.entity === "_system") return null;
+      return transformEvent(event, config);
+    },
 
-  async send(payload: unknown, config: GA4Config) {
-    const ga4Payload = payload as GA4Payload;
+    async send(payload: unknown, config: GA4Config) {
+      const ga4Payload = payload as GA4Payload;
 
-    if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
-      // Client-side: use gtag
-      (window as any).gtag("event", ga4Payload.eventName, ga4Payload.parameters);
-    } else if (config.apiSecret) {
-      // Server-side: Measurement Protocol
-      const url = `https://www.google-analytics.com/mp/collect?measurement_id=${config.measurementId}&api_secret=${config.apiSecret}`;
+      if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+        // Client-side: use gtag
+        (window as any).gtag("event", ga4Payload.eventName, ga4Payload.parameters);
+      } else if (config.apiSecret) {
+        // Server-side: Measurement Protocol
+        const url = `https://www.google-analytics.com/mp/collect?measurement_id=${config.measurementId}&api_secret=${config.apiSecret}`;
 
-      await fetch(url, {
-        method: "POST",
-        body: JSON.stringify({
-          client_id: "server", // should be passed from client
-          events: [
-            {
-              name: ga4Payload.eventName,
-              params: ga4Payload.parameters,
-            },
-          ],
-        }),
-      });
-    }
-  },
+        await fetch(url, {
+          method: "POST",
+          body: JSON.stringify({
+            client_id: ga4Payload.clientId,
+            ...(ga4Payload.userId ? { user_id: ga4Payload.userId } : {}),
+            events: [
+              {
+                name: ga4Payload.eventName,
+                params: ga4Payload.parameters,
+              },
+            ],
+          }),
+        });
+      }
+    },
 
-  onConsent(state: ConsentState) {
-    if (!consentModeEnabled) return;
+    onConsent(state: ConsentState) {
+      if (!consentModeEnabled) return;
 
-    // Update Google Consent Mode
-    if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
-      (window as any).gtag("consent", "update", mapConsentToGoogle(state));
-    }
-  },
-};
+      // Update Google Consent Mode
+      if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+        (window as any).gtag("consent", "update", mapConsentToGoogle(state));
+      }
+    },
+  };
+}
+
+/** Default GA4 destination instance for convenience */
+export const ga4: Destination<GA4Config> = createGA4();
 
 export default ga4;

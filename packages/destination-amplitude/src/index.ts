@@ -234,36 +234,15 @@ export const amplitude: Destination<AmplitudeConfig> = {
     }
   },
 
-  transform(event: JctEvent) {
+  transform(event: JctEvent, config: AmplitudeConfig) {
     // Skip internal/system events that Amplitude doesn't need
     if (event.entity === "_system") return null;
 
-    return transformEvent(event, {} as AmplitudeConfig);
+    return transformEvent(event, config);
   },
 
   async send(payload: unknown, config: AmplitudeConfig) {
     const ampEvent = payload as AmplitudeEvent;
-
-    // Re-transform with actual config (transform doesn't have config access by design)
-    // In practice, you'd restructure this — here we just re-apply config
-    const _fullPayload = transformEvent(
-      // Reconstruct minimal event for re-transform
-      {
-        entity: "",
-        action: "",
-        properties: ampEvent.event_properties,
-        context: {},
-        user: {
-          anonymousId: ampEvent.device_id,
-          userId: ampEvent.user_id,
-        },
-        timestamp: new Date(ampEvent.time).toISOString(),
-        id: ampEvent.insert_id,
-        version: "1.0.0",
-        source: { type: "client", name: "browser", version: "0.1.0" },
-      } as JctEvent,
-      config,
-    );
 
     if (config.mode === "server") {
       await sendServer(ampEvent, config);

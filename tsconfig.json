@@ -10,6 +10,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "jsx": "react-jsx",
     "outDir": "dist",
     "rootDir": ".",
     "paths": {
@@ -25,9 +26,10 @@
       "@junctionjs/destination-plausible": ["./packages/destination-plausible/src"],
       "@junctionjs/cmp-onetrust": ["./packages/cmp-onetrust/src"],
       "@junctionjs/auto-collect": ["./packages/auto-collect/src"],
-      "@junctionjs/next": ["./packages/next/src"]
+      "@junctionjs/next": ["./packages/next/src"],
+      "@junctionjs/debug": ["./packages/debug/src"]
     }
   },
-  "include": ["packages/*/src/**/*.ts", "config/**/*.ts"],
+  "include": ["packages/*/src/**/*.ts", "packages/*/src/**/*.tsx", "config/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -85,10 +85,14 @@ export interface Gateway {
 
 export function createGateway(config: GatewayConfig): Gateway {
   const source: EventSource = {
-    type: "server",
+    type: "gateway",
     name: "gateway",
     version: "0.1.0",
   };
+
+  // Per-request context that gets merged by resolveContext
+  let currentServerContext: Record<string, unknown> = {};
+  let currentClientContext: Record<string, unknown> = {};
 
   const collector = createCollector({
     config: {
@@ -96,6 +100,10 @@ export function createGateway(config: GatewayConfig): Gateway {
       destinations: config.destinations,
     },
     source,
+    resolveContext: () => ({
+      ...currentClientContext,
+      server: currentServerContext,
+    }),
   });
 
   // ── CORS Headers ──
@@ -213,16 +221,19 @@ export function createGateway(config: GatewayConfig): Gateway {
         }
       }
 
-      // Enrich with server context and forward to collector
-      const serverContext = extractServerContext(request);
+      // Set per-request server context for resolveContext to merge
+      currentServerContext = extractServerContext(request);
 
       for (const event of events) {
-        collector.track(event.entity, event.action, {
-          ...event.properties,
-          _server: serverContext,
-          _client: event.context,
-          _user: event.user,
-        });
+        // Set the client context for this event so resolveContext merges it
+        currentClientContext = event.context ?? {};
+
+        // Forward user identity if present
+        if (event.user?.userId) {
+          collector.identify(event.user.userId, event.user.traits);
+        }
+
+        collector.track(event.entity, event.action, event.properties);
       }
 
       // Flush immediately (edge functions are short-lived)

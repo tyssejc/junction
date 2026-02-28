@@ -90,7 +90,7 @@ export function http(config: HttpConfig): Destination<HttpConfig> {
       }
     },
 
-    transform(event: JctEvent): HttpPayload | null {
+    transform(event: JctEvent, _config: HttpConfig): HttpPayload | null {
       const body = config.transform ? config.transform(event) : event;
       if (body == null) return null;
       return { event, body };

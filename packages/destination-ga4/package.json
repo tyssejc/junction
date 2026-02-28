@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/destination-ga4",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Google Analytics 4 destination for Junction — gtag.js, Measurement Protocol, Consent Mode v2",
   "type": "module",
   "main": "dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Isomorphic event collector core — types, consent, validation, and runtime",
   "type": "module",
   "main": "dist/index.js",

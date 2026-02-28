@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/destination-http",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Generic HTTP destination for Junction — POST events to any endpoint",
   "type": "module",
   "main": "dist/index.js",

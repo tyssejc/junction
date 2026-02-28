@@ -54,7 +54,7 @@ describe("destination-plausible", () => {
   describe("transform", () => {
     it("maps page:viewed to 'pageview'", () => {
       const dest = plausible({ domain: "example.com" });
-      const result = dest.transform(makeEvent()) as any;
+      const result = dest.transform(makeEvent(), {} as any) as any;
 
       expect(result.body.name).toBe("pageview");
       expect(result.body.domain).toBe("example.com");
@@ -64,7 +64,7 @@ describe("destination-plausible", () => {
 
     it("maps custom events to entity:action format", () => {
       const dest = plausible({ domain: "example.com" });
-      const result = dest.transform(makeEvent({ entity: "signup", action: "completed" })) as any;
+      const result = dest.transform(makeEvent({ entity: "signup", action: "completed" }), {} as any) as any;
 
       expect(result.body.name).toBe("signup:completed");
     });
@@ -75,8 +75,8 @@ describe("destination-plausible", () => {
         eventName: (e) => (e.entity === "page" ? "pageview" : null),
       });
 
-      expect(dest.transform(makeEvent())).not.toBeNull();
-      expect(dest.transform(makeEvent({ entity: "signup", action: "completed" }))).toBeNull();
+      expect(dest.transform(makeEvent(), {} as any)).not.toBeNull();
+      expect(dest.transform(makeEvent({ entity: "signup", action: "completed" }), {} as any)).toBeNull();
     });
 
     it("includes custom props when provided", () => {
@@ -84,7 +84,7 @@ describe("destination-plausible", () => {
         domain: "example.com",
         props: (e) => ({ path: e.context.page?.path ?? "/" }),
       });
-      const result = dest.transform(makeEvent()) as any;
+      const result = dest.transform(makeEvent(), {} as any) as any;
 
       expect(result.body.props).toEqual({ path: "/blog" });
     });
@@ -94,7 +94,7 @@ describe("destination-plausible", () => {
         domain: "example.com",
         revenue: () => ({ currency: "USD", amount: 29.99 }),
       });
-      const result = dest.transform(makeEvent({ entity: "order", action: "completed" })) as any;
+      const result = dest.transform(makeEvent({ entity: "order", action: "completed" }), {} as any) as any;
 
       expect(result.body.revenue).toEqual({ currency: "USD", amount: 29.99 });
     });
@@ -103,14 +103,14 @@ describe("destination-plausible", () => {
       const dest = plausible({ domain: "example.com" });
       const event = makeEvent();
       event.context.page!.referrer = "";
-      const result = dest.transform(event) as any;
+      const result = dest.transform(event, {} as any) as any;
 
       expect(result.body.referrer).toBeUndefined();
     });
 
     it("falls back to '/' when page context is missing", () => {
       const dest = plausible({ domain: "example.com" });
-      const result = dest.transform(makeEvent({ context: {} })) as any;
+      const result = dest.transform(makeEvent({ context: {} }), {} as any) as any;
 
       expect(result.body.url).toBe("/");
     });
@@ -126,7 +126,7 @@ describe("destination-plausible", () => {
       vi.stubGlobal("fetch", mockFetch);
 
       const dest = plausible({ domain: "example.com" });
-      const payload = dest.transform(makeEvent());
+      const payload = dest.transform(makeEvent(), {} as any);
       await dest.send(payload, {} as any);
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -149,7 +149,7 @@ describe("destination-plausible", () => {
         domain: "example.com",
         apiHost: "https://analytics.example.com",
       });
-      const payload = dest.transform(makeEvent());
+      const payload = dest.transform(makeEvent(), {} as any);
       await dest.send(payload, {} as any);
 
       expect(mockFetch).toHaveBeenCalledWith("https://analytics.example.com/api/event", expect.anything());
@@ -163,7 +163,7 @@ describe("destination-plausible", () => {
         domain: "example.com",
         apiHost: "https://analytics.example.com/",
       });
-      const payload = dest.transform(makeEvent());
+      const payload = dest.transform(makeEvent(), {} as any);
       await dest.send(payload, {} as any);
 
       expect(mockFetch).toHaveBeenCalledWith("https://analytics.example.com/api/event", expect.anything());
@@ -180,7 +180,7 @@ describe("destination-plausible", () => {
       );
 
       const dest = plausible({ domain: "bad.example.com" });
-      const payload = dest.transform(makeEvent());
+      const payload = dest.transform(makeEvent(), {} as any);
 
       await expect(dest.send(payload, {} as any)).rejects.toThrow("returned 422: Invalid domain");
     });

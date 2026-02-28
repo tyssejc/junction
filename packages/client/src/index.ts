@@ -15,6 +15,7 @@ import {
   type CollectorConfig,
   type EventContext,
   type EventSource,
+  type JctEvent,
   createCollector,
 } from "@junctionjs/core";
 
@@ -71,17 +72,29 @@ function resolveBrowserContext(): Partial<EventContext> {
 
 const ANON_ID_KEY = "_jct_anon_id";
 
+function uuid(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for environments without crypto.randomUUID
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 function getOrCreateAnonymousId(): string {
   try {
     const existing = localStorage.getItem(ANON_ID_KEY);
     if (existing) return existing;
 
-    const id = crypto.randomUUID();
+    const id = uuid();
     localStorage.setItem(ANON_ID_KEY, id);
     return id;
   } catch {
     // localStorage not available (private browsing, etc.)
-    return crypto.randomUUID();
+    return uuid();
   }
 }
 
@@ -113,14 +126,14 @@ function getOrCreateSession(): { id: string; isNew: boolean; count: number } {
 
     // New session
     const session: SessionData = {
-      id: crypto.randomUUID(),
-      count: raw ? JSON.parse(raw).count + 1 : 1,
+      id: uuid(),
+      count: raw ? (JSON.parse(raw).count ?? 0) + 1 : 1,
       lastActivity: now,
     };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return { id: session.id, isNew: true, count: session.count };
   } catch {
-    return { id: crypto.randomUUID(), isNew: true, count: 1 };
+    return { id: uuid(), isNew: true, count: 1 };
   }
 }
 
@@ -177,14 +190,33 @@ export function createClient(config: ClientConfig): JunctionClient {
     },
   });
 
+  // Track cleanup functions for teardown
+  const cleanupFns: Array<() => void> = [];
+
   // Wrap collector to inject anonymous ID
   const originalTrack = collector.track;
+  const originalShutdown = collector.shutdown;
   const client: JunctionClient = {
     ...collector,
     anonymousId,
     session,
     track(entity, action, properties) {
       originalTrack(entity, action, properties);
+    },
+    async shutdown() {
+      // Run all cleanup functions
+      for (const cleanup of cleanupFns) {
+        cleanup();
+      }
+      cleanupFns.length = 0;
+
+      // Remove global
+      if (config.globalName !== false && typeof window !== "undefined") {
+        const name = config.globalName ?? "jct";
+        delete (window as any)[name];
+      }
+
+      await originalShutdown();
     },
   };
 
@@ -197,9 +229,11 @@ export function createClient(config: ClientConfig): JunctionClient {
     // SPA navigation: listen for popstate and pushState/replaceState
     if (typeof window !== "undefined") {
       // Handle Astro View Transitions
-      document.addEventListener("astro:page-load", () => {
+      const astroHandler = () => {
         client.track("page", "viewed");
-      });
+      };
+      document.addEventListener("astro:page-load", astroHandler);
+      cleanupFns.push(() => document.removeEventListener("astro:page-load", astroHandler));
 
       // Handle generic SPA navigation (History API)
       const originalPushState = history.pushState.bind(history);
@@ -215,24 +249,49 @@ export function createClient(config: ClientConfig): JunctionClient {
         // Don't track replaceState as page view — it's usually for URL cleanup
       };
 
-      window.addEventListener("popstate", () => {
-        client.track("page", "viewed");
+      cleanupFns.push(() => {
+        history.pushState = originalPushState;
+        history.replaceState = originalReplaceState;
       });
+
+      const popstateHandler = () => {
+        client.track("page", "viewed");
+      };
+      window.addEventListener("popstate", popstateHandler);
+      cleanupFns.push(() => window.removeEventListener("popstate", popstateHandler));
     }
   }
 
   // ── Beacon on unload ───────────────────────────────────
 
   if (config.useBeacon !== false && config.beaconUrl) {
-    const _beaconUrl = config.beaconUrl;
+    const beaconUrl = config.beaconUrl;
+
+    // Track events for sendBeacon on unload
+    const beaconQueue: JctEvent[] = [];
+    const unsubscribeBeacon = collector.on("event", ({ payload }) => {
+      beaconQueue.push(payload as JctEvent);
+    });
+    const unsubscribeBeaconSend = collector.on("destination:send", () => {
+      beaconQueue.length = 0;
+    });
+    cleanupFns.push(unsubscribeBeacon);
+    cleanupFns.push(unsubscribeBeaconSend);
 
     if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", () => {
+      const visibilityHandler = () => {
         if (document.visibilityState === "hidden") {
+          // Use sendBeacon for reliable delivery on page unload
+          if (typeof navigator.sendBeacon === "function" && beaconQueue.length > 0) {
+            const blob = new Blob([JSON.stringify({ events: beaconQueue })], { type: "application/json" });
+            navigator.sendBeacon(beaconUrl, blob);
+            beaconQueue.length = 0;
+          }
           collector.flush();
-          // TODO: use navigator.sendBeacon for remaining events
         }
-      });
+      };
+      document.addEventListener("visibilitychange", visibilityHandler);
+      cleanupFns.push(() => document.removeEventListener("visibilitychange", visibilityHandler));
     }
   }
 

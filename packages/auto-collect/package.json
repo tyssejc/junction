@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/auto-collect",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Automatic event collection for Junction — clicks, scroll depth, video, forms, engagement, web vitals",
   "type": "module",
   "main": "dist/index.js",

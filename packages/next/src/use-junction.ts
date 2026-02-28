@@ -10,7 +10,7 @@ import { JunctionContext } from "./provider";
  * Throws if called outside of a provider tree entirely.
  */
 export function useJunction(): JunctionClient | null {
-  const client = useContext(JunctionContext);
+  const client = useContext(JunctionContext) as JunctionClient | null;
   // Context is undefined when there is no provider in the tree at all.
   // It is null while the provider is initializing — that's expected.
   return client;

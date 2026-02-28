@@ -24,6 +24,9 @@ export default defineConfig({
       "@junctionjs/cmp-onetrust": path.resolve(__dirname, "packages/cmp-onetrust/src"),
       "@junctionjs/auto-collect": path.resolve(__dirname, "packages/auto-collect/src"),
       "@junctionjs/next": path.resolve(__dirname, "packages/next/src"),
+      "@junctionjs/debug": path.resolve(__dirname, "packages/debug/src"),
+      "@junctionjs/destination-http": path.resolve(__dirname, "packages/destination-http/src"),
+      "@junctionjs/destination-plausible": path.resolve(__dirname, "packages/destination-plausible/src"),
     },
   },
 });
