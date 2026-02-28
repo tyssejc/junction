@@ -15,6 +15,7 @@
  * and what GTM's "Container" would be if it were developer-friendly.
  */
 
+import type { AutoCollectConfig } from "@junctionjs/auto-collect";
 import type { CollectorConfig, EventContract } from "@junctionjs/core";
 import { schemas } from "@junctionjs/core";
 import { amplitude } from "@junctionjs/destination-amplitude";
@@ -199,6 +200,40 @@ export const config: CollectorConfig = {
 
   // Debug in non-production
   debug: env !== "production",
+};
+
+// ─── Auto-Collect Configuration ──────────────────────────────────
+
+/**
+ * Configure which browser events are automatically collected.
+ * Each feature is individually opt-in. Set to `true` for defaults
+ * or pass an options object for fine-grained control.
+ *
+ * Usage:
+ *   import { createClient } from "@junctionjs/client";
+ *   import { createAutoCollect } from "@junctionjs/auto-collect";
+ *
+ *   const client = createClient(config);
+ *   const autoCollect = createAutoCollect(client, autoCollectConfig);
+ */
+export const autoCollectConfig: AutoCollectConfig = {
+  // Track clicks on buttons, outbound links, and download links
+  clicks: true,
+
+  // Track scroll depth milestones
+  scrollDepth: { thresholds: [25, 50, 75, 100] },
+
+  // Track form submissions (captures form metadata, never field values)
+  formSubmit: true,
+
+  // Track page engagement (time on page, visibility, heartbeats)
+  engagement: { heartbeatInterval: 15_000 },
+
+  // Track Core Web Vitals (CLS, LCP, INP, TTFB, FCP)
+  webVitals: true,
+
+  // Video tracking disabled — enable with `video: true` if you have HTML5 videos
+  // video: true,
 };
 
 export default config;

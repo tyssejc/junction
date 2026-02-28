@@ -23,7 +23,8 @@
       "@junctionjs/destination-meta": ["./packages/destination-meta/src"],
       "@junctionjs/destination-http": ["./packages/destination-http/src"],
       "@junctionjs/destination-plausible": ["./packages/destination-plausible/src"],
-      "@junctionjs/cmp-onetrust": ["./packages/cmp-onetrust/src"]
+      "@junctionjs/cmp-onetrust": ["./packages/cmp-onetrust/src"],
+      "@junctionjs/auto-collect": ["./packages/auto-collect/src"]
     }
   },
   "include": ["packages/*/src/**/*.ts", "config/**/*.ts"],
