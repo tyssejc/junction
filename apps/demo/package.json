@@ -1,0 +1,35 @@
+{
+  "name": "@junctionjs/demo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@junctionjs/client": "*",
+    "@junctionjs/core": "*",
+    "@junctionjs/debug": "*",
+    "@junctionjs/destination-amplitude": "*",
+    "@junctionjs/destination-ga4": "*",
+    "@junctionjs/destination-meta": "*",
+    "@junctionjs/next": "*",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^2.6.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.5.0"
+  }
+}

@@ -23,6 +23,7 @@ export default defineConfig({
       "@junctionjs/destination-meta": path.resolve(__dirname, "packages/destination-meta/src"),
       "@junctionjs/cmp-onetrust": path.resolve(__dirname, "packages/cmp-onetrust/src"),
       "@junctionjs/auto-collect": path.resolve(__dirname, "packages/auto-collect/src"),
+      "@junctionjs/next": path.resolve(__dirname, "packages/next/src"),
     },
   },
 });

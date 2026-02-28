@@ -1,0 +1,27 @@
+{
+  "name": "@junctionjs/next",
+  "version": "0.1.0",
+  "description": "Next.js integration for Junction",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "files": ["src"],
+  "peerDependencies": {
+    "@junctionjs/client": "*",
+    "@junctionjs/core": "*",
+    "next": ">=14.0.0",
+    "react": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "next": "^15.1.0"
+  },
+  "license": "MIT"
+}
