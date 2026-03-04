@@ -30,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Build all packages
-        run: npm run build
+        run: npx turbo build --filter='./packages/*'
 
       - name: Run tests
         run: npm test
