@@ -1,7 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.0/schema.json",
   "files": {
-    "ignore": ["dist", "node_modules", ".turbo", "package-lock.json", "*.d.ts"]
+    "ignore": ["dist", "node_modules", ".turbo", ".changeset", "package-lock.json", "*.d.ts"]
   },
   "formatter": {
     "indentStyle": "space",

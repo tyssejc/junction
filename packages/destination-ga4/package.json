@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@junctionjs/core": "*"
+    "@junctionjs/core": "^0.1.0"
   },
   "devDependencies": {
     "@junctionjs/core": "*",
@@ -28,6 +28,11 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
   },
   "license": "MIT",
   "repository": {
