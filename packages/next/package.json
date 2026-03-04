@@ -31,6 +31,9 @@
     }
   },
   "devDependencies": {
+    "@junctionjs/client": "*",
+    "@junctionjs/core": "*",
+    "@junctionjs/debug": "*",
     "@types/react": "^19.0.0",
     "react": "^19.0.0",
     "next": "^15.1.0",
