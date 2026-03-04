@@ -1,9 +1,10 @@
 "use client";
 
+import { useConsentCookie } from "@/components/consent/use-consent-cookie";
 import { cn } from "@/lib/utils";
 import type { ConsentState } from "@junctionjs/core";
 import { useJunction } from "@junctionjs/next";
-import { ChevronDown, ChevronUp, Shield, Zap } from "lucide-react";
+import { ChevronDown, ChevronUp, Cookie, Shield, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface QueuedEventDisplay {
@@ -14,6 +15,7 @@ interface QueuedEventDisplay {
 
 export default function ConsentDemoPage() {
   const junction = useJunction();
+  const { hasConsented, reset: resetBanner } = useConsentCookie();
   const [consentState, setConsentState] = useState<ConsentState>({});
   const [queuedEvents, setQueuedEvents] = useState<QueuedEventDisplay[]>([]);
   const [showCustomize, setShowCustomize] = useState(false);
@@ -94,6 +96,31 @@ export default function ConsentDemoPage() {
             Junction&apos;s consent state machine queues events while consent is pending, then flushes or drops them
             based on user choice. No data escapes without explicit permission.
           </p>
+        </div>
+      </div>
+
+      {/* ── Site-Wide Banner Info ── */}
+      <div className="mb-6 flex items-start gap-3 rounded-xl border border-accent/30 bg-accent/5 p-4">
+        <Cookie className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+        <div className="flex-1">
+          <p className="text-sm">
+            <strong>Site-wide cookie banner active.</strong> The floating consent banner at the bottom of the page
+            manages consent across the entire site. This page is a deep-dive into how the consent state machine works
+            under the hood.
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={resetBanner}
+              className="rounded-lg border border-accent/40 bg-accent/10 px-4 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent/20"
+              data-testid="reset-banner"
+            >
+              Reset Banner
+            </button>
+            <span className="text-xs text-muted-foreground">
+              {hasConsented ? "Banner is dismissed — click to reset and see it again" : "Banner is visible"}
+            </span>
+          </div>
         </div>
       </div>
 

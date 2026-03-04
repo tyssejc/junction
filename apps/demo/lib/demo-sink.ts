@@ -59,6 +59,28 @@ export function clearEvents(): void {
   capturedEvents.length = 0;
 }
 
+// ─── Simulated Consent-Gated Destinations ───────────────────────
+// These no-op destinations exist solely to make the consent queue work.
+// They declare the same consent requirements as real GA4/Amplitude/Meta,
+// so events queue while consent is pending and drop when denied.
+
+function noopDestination(name: string, consent: string[]): Destination<Record<string, never>> {
+  return {
+    name,
+    consent,
+    runtime: "client",
+    init() {},
+    transform(event: JctEvent) {
+      return event;
+    },
+    async send() {},
+  };
+}
+
+export const simulatedGA4 = noopDestination("ga4", ["analytics"]);
+export const simulatedAmplitude = noopDestination("amplitude", ["analytics"]);
+export const simulatedMeta = noopDestination("meta", ["marketing"]);
+
 // ─── Destination ─────────────────────────────────────────────────
 
 export const demoSink: Destination<DemoSinkConfig> = {
@@ -83,9 +105,9 @@ export const demoSink: Destination<DemoSinkConfig> = {
     const captured: CapturedEvent = {
       raw: event,
       transforms: {
-        ga4: ga4.transform(event),
-        amplitude: amplitude.transform(event),
-        meta: meta.transform(event),
+        ga4: ga4.transform(event, {} as any),
+        amplitude: amplitude.transform(event, {} as any),
+        meta: meta.transform(event, {} as any),
       },
       timestamp: new Date().toISOString(),
     };
