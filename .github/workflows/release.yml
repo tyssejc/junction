@@ -35,7 +35,7 @@ jobs:
         run: npm ci
 
       - name: Build packages
-        run: turbo build --filter='./packages/*'
+        run: npx turbo build --filter='./packages/*'
 
       - name: Create release PR or publish
         id: changesets
