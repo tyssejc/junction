@@ -18,7 +18,7 @@
     "prepare": "husky",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "npm run build && changeset publish"
+    "release": "turbo build --filter='./packages/*' && changeset publish"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
