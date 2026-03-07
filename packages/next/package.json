@@ -40,6 +40,11 @@
     "tsup": "^8.0.0",
     "typescript": "^5.5.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tyssejc/junction",
+    "directory": "packages/next"
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true,
