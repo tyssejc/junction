@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/next",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Next.js integration for Junction",
   "type": "module",
   "main": "dist/index.js",
@@ -19,9 +19,9 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@junctionjs/client": "^0.1.0",
-    "@junctionjs/core": "^0.1.0",
-    "@junctionjs/debug": "^0.1.0",
+    "@junctionjs/client": "^0.1.2",
+    "@junctionjs/core": "^0.2.0",
+    "@junctionjs/debug": "^1.0.0",
     "next": ">=14.0.0",
     "react": ">=18.0.0"
   },

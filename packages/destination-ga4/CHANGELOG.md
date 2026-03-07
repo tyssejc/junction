@@ -1,8 +1,8 @@
-# @junctionjs/core
+# @junctionjs/destination-ga4
 
-## 0.2.0
+## 1.0.0
 
-### Minor Changes
+### Patch Changes
 
 - [`2fc0380`](https://github.com/tyssejc/junction/commit/2fc0380d851b3cefe41849e1090e9da7a1b9c91b) Thanks [@tyssejc](https://github.com/tyssejc)! - Fix consent engine: AND logic, no double-sends, synchronous queue drain
 
@@ -17,8 +17,5 @@
   - GA4 destination updated to `consent: ["analytics", "marketing"]`
   - E2E fixture updated with realistic destination set (Amplitude, Sentry, Meta, GA4)
 
-## 0.1.3
-
-### Patch Changes
-
-- [`34bf3ee`](https://github.com/tyssejc/junction/commit/34bf3ee0c2844cd9319a76ec604fc39d53091e04) Thanks [@tyssejc](https://github.com/tyssejc)! - Publish unpublished versions
+- Updated dependencies [[`2fc0380`](https://github.com/tyssejc/junction/commit/2fc0380d851b3cefe41849e1090e9da7a1b9c91b)]:
+  - @junctionjs/core@0.2.0
