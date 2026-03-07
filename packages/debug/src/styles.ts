@@ -22,6 +22,7 @@ export const PANEL_STYLES = /* css */ `
     --jd-red: #f87171;
     --jd-blue: #60a5fa;
     --jd-purple: #a78bfa;
+    --jd-cyan: #22d3ee;
     --jd-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --jd-mono: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
     --jd-radius: 6px;
@@ -430,6 +431,30 @@ export const PANEL_STYLES = /* css */ `
   .jd-dest-err { background: var(--jd-red); }
   .jd-dest-pending { background: var(--jd-yellow); }
 
+  .jd-dest-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .jd-dest-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .jd-event-row .jd-dest-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .jd-event-row .jd-dest-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
   .jd-dest-info {
     flex: 1;
   }
@@ -438,7 +463,39 @@ export const PANEL_STYLES = /* css */ `
     font-weight: 600;
     font-size: 11px;
     color: var(--jd-text-bright);
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
+
+  /* ─── Consent category pills ─── */
+
+  .jd-consent-pills {
+    display: inline-flex;
+    gap: 2px;
+    flex-shrink: 0;
+    margin-left: 4px;
+  }
+
+  .jd-consent-pill {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: var(--jd-mono);
+    text-align: center;
+    line-height: 14px;
+    cursor: default;
+  }
+
+  .jd-consent-pill-analytics       { background: #1e3a5f; color: var(--jd-blue); }
+  .jd-consent-pill-marketing       { background: #2e1a3d; color: var(--jd-purple); }
+  .jd-consent-pill-personalization { background: #3d3a1a; color: var(--jd-yellow); }
+  .jd-consent-pill-exempt          { background: #1a3d2e; color: var(--jd-green); }
+  .jd-consent-pill-necessary       { background: #1a3d2e; color: var(--jd-green); }
+  .jd-consent-pill-social          { background: #0d3d3d; color: var(--jd-cyan); }
 
   .jd-dest-meta {
     font-size: 10px;

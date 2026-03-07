@@ -143,6 +143,59 @@ function syntaxHighlight(obj: unknown, indent = 0): string {
   return String(obj);
 }
 
+// ─── Destination Icons ──────────────────────────────────────────
+// Small 16×16 SVG icons keyed by destination name substring.
+// These are simplified/placeholder logos for visual recognition.
+
+const DEST_ICONS: Record<string, string> = {
+  ga4: `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M13.5 8A5.5 5.5 0 1 1 2.5 8a5.5 5.5 0 0 1 11 0Z" stroke="#F6B704" stroke-width="1.5"/>
+    <path d="M8 3v5l3.5 2" stroke="#F6B704" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="8" cy="13.5" r="1" fill="#F6B704"/>
+  </svg>`,
+  amplitude: `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 12l3-4 2.5 2L11 5l3 4" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="2" cy="12" r="1" fill="#60a5fa"/>
+    <circle cx="14" cy="9" r="1" fill="#60a5fa"/>
+  </svg>`,
+  meta: `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 11C2 7 4 4 5.5 4S8 7 8 8s1 4 2.5 4S14 9 14 5" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>`,
+  sentry: `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M8 2L2 13h4.5M8 2l6 11h-3M8 2v6" stroke="#f87171" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="6.5" cy="13" r="0.75" fill="#f87171"/>
+  </svg>`,
+};
+
+function destIcon(name: string): HTMLElement | null {
+  const lower = name.toLowerCase();
+  for (const [key, svg] of Object.entries(DEST_ICONS)) {
+    if (lower.includes(key)) {
+      const span = el("span", { class: "jd-dest-icon" });
+      span.innerHTML = svg;
+      return span;
+    }
+  }
+  return null;
+}
+
+function consentPills(categories: string[]): HTMLElement {
+  const wrapper = el("span", { class: "jd-consent-pills" });
+  const letterMap: Record<string, string> = {
+    analytics: "A",
+    marketing: "M",
+    personalization: "P",
+    exempt: "E",
+    necessary: "N",
+    social: "S",
+  };
+  for (const cat of categories) {
+    const letter = letterMap[cat] ?? cat.charAt(0).toUpperCase();
+    wrapper.appendChild(el("span", { class: `jd-consent-pill jd-consent-pill-${cat}`, title: cat }, letter));
+  }
+  return wrapper;
+}
+
 // ─── Panel Factory ──────────────────────────────────────────────
 
 export function createPanel(collector: Collector, store: DebugStore, options: PanelOptions): Panel {
@@ -371,7 +424,17 @@ export function createPanel(collector: Collector, store: DebugStore, options: Pa
 
       const dl = destLabel(entry);
       if (dl) {
-        row.appendChild(el("span", { class: "jd-event-dest" }, dl));
+        const icon = destIcon(dl);
+        if (icon) {
+          icon.title = dl;
+          row.appendChild(icon);
+        } else {
+          row.appendChild(el("span", { class: "jd-event-dest" }, dl));
+        }
+        const cats = store.getDestinationConsent(dl);
+        if (cats && cats.length > 0) {
+          row.appendChild(consentPills(cats));
+        }
       }
 
       // Detail area
@@ -501,8 +564,18 @@ export function createPanel(collector: Collector, store: DebugStore, options: Pa
 
       row.appendChild(el("span", { class: `jd-dest-status ${statusClass}` }));
 
+      const icon = destIcon(name);
+      if (icon) {
+        row.appendChild(icon);
+      }
+
       const info = el("div", { class: "jd-dest-info" });
-      info.appendChild(el("div", { class: "jd-dest-name" }, name));
+      const nameRow = el("div", { class: "jd-dest-name" }, name);
+      const destConsent = store.getDestinationConsent(name);
+      if (destConsent && destConsent.length > 0) {
+        nameRow.appendChild(consentPills(destConsent));
+      }
+      info.appendChild(nameRow);
 
       const statusLabel = hasError ? "error" : isInit ? "ready" : "initializing";
       info.appendChild(el("div", { class: "jd-dest-meta" }, statusLabel));

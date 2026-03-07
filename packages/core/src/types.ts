@@ -210,7 +210,7 @@ export interface Destination<TConfig = Record<string, unknown>> {
   /** Destination version (semver) */
   version: string;
 
-  /** Which consent categories this destination requires (OR logic: any match = allowed) */
+  /** Which consent categories this destination requires (AND logic: ALL must be granted) */
   consent: ConsentCategory[];
 
   /** Whether this destination runs client-side, server-side, or both */

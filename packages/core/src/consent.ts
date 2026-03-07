@@ -16,9 +16,11 @@ import type { ConsentCategory, ConsentConfig, ConsentState, JctEvent } from "./t
 
 // ─── Types ───────────────────────────────────────────────────────
 
-interface QueuedEvent {
+export interface QueuedEvent {
   event: JctEvent;
   queuedAt: number;
+  /** Destinations that already received this event (skip on replay) */
+  sentTo: Set<string>;
 }
 
 type ConsentListener = (state: ConsentState, previous: ConsentState) => void;
@@ -40,7 +42,7 @@ export interface ConsentManager {
   isPending: (categories: ConsentCategory[]) => boolean;
 
   /** Queue an event for later dispatch when consent is resolved */
-  enqueue: (event: JctEvent) => void;
+  enqueue: (event: JctEvent, sentTo: Set<string>) => void;
 
   /** Get and clear queued events (called when consent changes) */
   drain: () => QueuedEvent[];
@@ -133,8 +135,12 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
         return true;
       }
 
-      // OR logic: at least one required category must be explicitly true
-      return required.some((category) => state[category] === true);
+      // AND logic: ALL required categories must be explicitly granted.
+      // This is the GDPR-strict interpretation — e.g., GA4 requires both
+      // analytics_storage AND ad_storage, so consent: ["analytics", "marketing"]
+      // means the user must grant both before data flows.
+      const actionable = required.filter((c) => c !== "necessary" && c !== "exempt");
+      return actionable.length > 0 && actionable.every((category) => state[category] === true);
     },
 
     isPending(categories: ConsentCategory[]): boolean {
@@ -142,14 +148,19 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
       if (config.strictMode) return false;
       // A category is "pending" if it hasn't been explicitly set to true or false
       // "necessary" and "exempt" categories are never pending
-      return categories
-        .filter((cat) => cat !== "necessary" && cat !== "exempt")
-        .some((cat) => state[cat] === undefined);
+      const actionable = categories.filter((cat) => cat !== "necessary" && cat !== "exempt");
+      return actionable.some((cat) => state[cat] === undefined);
     },
 
-    enqueue(event: JctEvent) {
+    enqueue(event: JctEvent, sentTo: Set<string>) {
       if (config.strictMode || config.queueTimeout === 0) return;
-      queue.push({ event, queuedAt: Date.now() });
+      // Deduplicate: if this exact event is already queued, merge sentTo sets
+      const existing = queue.find((q) => q.event.id === event.id);
+      if (existing) {
+        for (const name of sentTo) existing.sentTo.add(name);
+        return;
+      }
+      queue.push({ event, queuedAt: Date.now(), sentTo: new Set(sentTo) });
     },
 
     drain(): QueuedEvent[] {

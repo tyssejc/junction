@@ -223,7 +223,7 @@ export function createGA4(): Destination<GA4Config> {
     name: "ga4",
     description: "Google Analytics 4",
     version: "0.1.0",
-    consent: ["analytics"],
+    consent: ["analytics", "marketing"],
     runtime: "both",
 
     init(config: GA4Config) {

@@ -12,18 +12,18 @@
     window.__TEST__ = { events: [], collector: null };
 
     /**
-     * Test-sink destination: captures all events into window.__TEST__.events
+     * Sink factory — creates a mock destination that logs sends to window.__TEST__.events
      */
-    function createTestSink() {
+    function createSink(name, consent) {
       return {
-        name: "test-sink",
+        name: name,
         version: "0.0.1",
-        consent: ["analytics"],
+        consent: consent,
         runtime: "client",
         init: function () { return Promise.resolve(); },
         transform: function (event) { return event; },
         send: function (payload) {
-          window.__TEST__.events.push(payload);
+          window.__TEST__.events.push({ destination: name, payload: payload });
           return Promise.resolve();
         },
       };
@@ -46,9 +46,12 @@
           respectGPC: false,
         },
         destinations: [
-          { destination: createTestSink(), config: {} },
+          { destination: createSink("amplitude", ["analytics"]), config: {} },
+          { destination: createSink("sentry", ["exempt"]), config: {} },
+          { destination: createSink("meta-pixel", ["marketing"]), config: {} },
+          { destination: createSink("ga4", ["analytics", "marketing"]), config: {} },
         ],
-        debug: false,
+        debug: true,
         buffer: { maxSize: 1, maxWait: 100 },
       };
 
@@ -66,9 +69,15 @@
         source: { type: "client", name: "e2e-test", version: "0.0.1" },
       });
 
+      // Initialize debug panel
+      Junction.createDebugPanel(collector, { startOpen: true });
+
       window.__TEST__.collector = collector;
       return true;
     };
+
+    // Auto-init so the debug panel appears on page load
+    window.initJunction();
   </script>
 </body>
 </html>

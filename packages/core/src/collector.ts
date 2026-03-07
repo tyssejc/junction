@@ -112,7 +112,7 @@ export function createCollector(options: CreateCollectorOptions): Collector {
     for (const [name, entry] of destinations) {
       try {
         await entry.destination.init(entry.config);
-        emit("destination:init", { destination: name });
+        emit("destination:init", { destination: name, consent: entry.consent ?? entry.destination.consent });
         if (config.debug) {
           console.log(`[Junction] Destination initialized: ${name}`);
         }
@@ -145,7 +145,9 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       entry.destination.onConsent?.(state);
     }
 
-    // Drain queued events asynchronously to avoid blocking the main thread
+    // Drain and re-dispatch queued events synchronously.
+    // Synchronous dispatch ensures consent state is consistent — if consent is
+    // revoked before the next microtask, events won't leak to destinations.
     const queued = consent.drain();
     if (queued.length === 0) {
       emit("queue:flush", { count: 0 });
@@ -156,21 +158,20 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       console.log(`[Junction] Flushing ${queued.length} queued events after consent change`);
     }
 
-    queueMicrotask(() => {
-      for (const { event } of queued) {
-        const updatedEvent = {
-          ...event,
-          user: { ...user },
-          context: {
-            ...event.context,
-            was_queued: true,
-            consent: consent.getState(),
-          },
-        };
-        dispatchToDestinations(updatedEvent);
-      }
-      emit("queue:flush", { count: queued.length });
-    });
+    for (const { event, sentTo } of queued) {
+      const updatedEvent = {
+        ...event,
+        user: { ...user },
+        context: {
+          ...event.context,
+          was_queued: true,
+          consent: consent.getState(),
+        },
+      };
+      // Pass sentTo so destinations that already received this event are skipped
+      dispatchToDestinations(updatedEvent, sentTo);
+    }
+    emit("queue:flush", { count: queued.length });
   });
 
   // ── Internal helpers ───────────────────────────────────
@@ -216,15 +217,20 @@ export function createCollector(options: CreateCollectorOptions): Collector {
     };
   }
 
-  function dispatchToDestinations(event: JctEvent): void {
+  function dispatchToDestinations(event: JctEvent, alreadySentTo?: Set<string>): void {
+    const sentTo = alreadySentTo ?? new Set<string>();
+    let hasPending = false;
+
     for (const [name, entry] of destinations) {
+      // Skip destinations that already received this event (e.g., exempt on first pass)
+      if (sentTo.has(name)) continue;
+
       const requiredConsent = entry.consent ?? entry.destination.consent;
 
       // Check consent
       if (!consent.isAllowed(requiredConsent)) {
-        // If consent is pending (not explicitly denied), queue the event
         if (consent.isPending(requiredConsent)) {
-          consent.enqueue(event);
+          hasPending = true;
         }
         continue;
       }
@@ -233,6 +239,8 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       try {
         const payload = entry.destination.transform(event, entry.config);
         if (payload == null) continue; // destination chose to skip this event
+
+        sentTo.add(name);
 
         // Send asynchronously
         entry.destination.send(payload, entry.config).catch((e) => {
@@ -246,6 +254,11 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       } catch (e) {
         emit("destination:error", { destination: name, error: e, event });
       }
+    }
+
+    // Queue once per event (not per destination) if any destination is still pending
+    if (hasPending) {
+      consent.enqueue(event, sentTo);
     }
   }
 
@@ -333,7 +346,10 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       // Initialize asynchronously
       Promise.resolve(entry.destination.init(entry.config))
         .then(() => {
-          emit("destination:init", { destination: entry.destination.name });
+          emit("destination:init", {
+            destination: entry.destination.name,
+            consent: entry.consent ?? entry.destination.consent,
+          });
         })
         .catch((e: unknown) => {
           emit("destination:error", { destination: entry.destination.name, error: e });

@@ -109,6 +109,7 @@ export function createDebugPanel(collector: Collector, options?: DebugPanelOptio
         consentChanges: 0,
         queueFlushes: 0,
       }),
+      getDestinationConsent: () => undefined,
       clear: () => {},
       onUpdate: () => () => {},
       destroy: () => {},

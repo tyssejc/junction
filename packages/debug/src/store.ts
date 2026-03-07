@@ -38,6 +38,8 @@ export interface DebugStore {
   getByType: (type: CollectorEvent) => DebugEntry[];
   /** Get aggregate counters */
   getCounters: () => DebugCounters;
+  /** Get consent categories for a destination (captured at init) */
+  getDestinationConsent: (name: string) => string[] | undefined;
   /** Clear all entries and reset counters */
   clear: () => void;
   /** Subscribe to updates (called on every new entry) */
@@ -53,6 +55,7 @@ export function createDebugStore(collector: Collector, maxEvents = 500): DebugSt
   let nextId = 1;
   const listeners = new Set<() => void>();
   const unsubscribers: Array<() => void> = [];
+  const destinationConsent = new Map<string, string[]>();
 
   const counters: DebugCounters = {
     total: 0,
@@ -93,6 +96,13 @@ export function createDebugStore(collector: Collector, maxEvents = 500): DebugSt
       case "destination:error": {
         const errDest = (payload as { destination?: string })?.destination ?? "unknown";
         counters.errors[errDest] = (counters.errors[errDest] ?? 0) + 1;
+        break;
+      }
+      case "destination:init": {
+        const initPayload = payload as { destination?: string; consent?: string[] };
+        if (initPayload?.destination && initPayload.consent) {
+          destinationConsent.set(initPayload.destination, initPayload.consent);
+        }
         break;
       }
       case "consent":
@@ -144,6 +154,10 @@ export function createDebugStore(collector: Collector, maxEvents = 500): DebugSt
 
     getCounters() {
       return { ...counters, sent: { ...counters.sent }, errors: { ...counters.errors } };
+    },
+
+    getDestinationConsent(name: string) {
+      return destinationConsent.get(name);
     },
 
     clear() {

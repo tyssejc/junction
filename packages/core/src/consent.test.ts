@@ -106,8 +106,8 @@ describe("ConsentManager", () => {
 
     it("clears the queue", () => {
       manager = createConsentManager(makeConfig());
-      manager.enqueue(makeEvent());
-      manager.enqueue(makeEvent());
+      manager.enqueue(makeEvent({ id: "evt-a" }), new Set());
+      manager.enqueue(makeEvent({ id: "evt-b" }), new Set());
       expect(manager.queueSize()).toBe(2);
 
       manager.reset();
@@ -137,10 +137,15 @@ describe("ConsentManager", () => {
       expect(manager.isAllowed(["necessary"])).toBe(true);
     });
 
-    it("uses OR logic — any matching category grants access", () => {
+    it("uses AND logic — ALL required categories must be granted", () => {
       manager = createConsentManager(makeConfig());
       manager.setState({ analytics: true, marketing: false });
 
+      // Only analytics granted, marketing denied — should NOT be allowed
+      expect(manager.isAllowed(["analytics", "marketing"])).toBe(false);
+
+      // Both granted — should be allowed
+      manager.setState({ marketing: true });
       expect(manager.isAllowed(["analytics", "marketing"])).toBe(true);
     });
 
@@ -207,8 +212,8 @@ describe("ConsentManager", () => {
       const event1 = makeEvent({ id: "evt-1" });
       const event2 = makeEvent({ id: "evt-2" });
 
-      manager.enqueue(event1);
-      manager.enqueue(event2);
+      manager.enqueue(event1, new Set());
+      manager.enqueue(event2, new Set());
       expect(manager.queueSize()).toBe(2);
 
       const drained = manager.drain();
@@ -220,13 +225,13 @@ describe("ConsentManager", () => {
 
     it("does not enqueue when queueTimeout is 0", () => {
       manager = createConsentManager(makeConfig({ queueTimeout: 0 }));
-      manager.enqueue(makeEvent());
+      manager.enqueue(makeEvent(), new Set());
       expect(manager.queueSize()).toBe(0);
     });
 
     it("expires old events from the queue", () => {
       manager = createConsentManager(makeConfig({ queueTimeout: 5_000 }));
-      manager.enqueue(makeEvent());
+      manager.enqueue(makeEvent(), new Set());
       expect(manager.queueSize()).toBe(1);
 
       // Advance time past the timeout
@@ -236,7 +241,7 @@ describe("ConsentManager", () => {
 
     it("keeps recent events in the queue", () => {
       manager = createConsentManager(makeConfig({ queueTimeout: 10_000 }));
-      manager.enqueue(makeEvent());
+      manager.enqueue(makeEvent(), new Set());
 
       // Advance time but not past the timeout
       vi.advanceTimersByTime(5_000);
@@ -342,7 +347,7 @@ describe("ConsentManager", () => {
   describe("strictMode", () => {
     it("disables event queuing (enqueue is a no-op)", () => {
       manager = createConsentManager(makeConfig({ strictMode: true, queueTimeout: 30_000 }));
-      manager.enqueue(makeEvent());
+      manager.enqueue(makeEvent(), new Set());
       expect(manager.queueSize()).toBe(0);
     });
 
@@ -354,8 +359,8 @@ describe("ConsentManager", () => {
 
     it("overrides queueTimeout (even if queueTimeout > 0, no queuing)", () => {
       manager = createConsentManager(makeConfig({ strictMode: true, queueTimeout: 60_000 }));
-      manager.enqueue(makeEvent({ id: "evt-strict-1" }));
-      manager.enqueue(makeEvent({ id: "evt-strict-2" }));
+      manager.enqueue(makeEvent({ id: "evt-strict-1" }), new Set());
+      manager.enqueue(makeEvent({ id: "evt-strict-2" }), new Set());
       expect(manager.queueSize()).toBe(0);
       expect(manager.drain()).toEqual([]);
     });
