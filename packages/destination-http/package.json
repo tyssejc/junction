@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/destination-http",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Generic HTTP destination for Junction — POST events to any endpoint",
   "type": "module",
   "main": "dist/index.js",
@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@junctionjs/core": "^0.1.0"
+    "@junctionjs/core": "^0.2.0"
   },
   "devDependencies": {
     "@junctionjs/core": "*",

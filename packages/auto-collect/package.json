@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/auto-collect",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Automatic event collection for Junction — clicks, scroll depth, video, forms, engagement, web vitals",
   "type": "module",
   "main": "dist/index.js",
@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@junctionjs/core": "^0.1.2"
+    "@junctionjs/core": "^0.2.0"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

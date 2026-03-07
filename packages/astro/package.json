@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/astro",
-  "version": "0.1.5",
+  "version": "1.0.0",
   "description": "Astro v5+ integration for Junction — script injection, SSR middleware, collect endpoint",
   "type": "module",
   "main": "dist/index.js",
@@ -27,11 +27,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@junctionjs/core": "^0.1.2"
+    "@junctionjs/core": "^0.2.0"
   },
   "peerDependencies": {
     "astro": "^5.0.0",
-    "@junctionjs/debug": "^0.1.0"
+    "@junctionjs/debug": "^1.0.0"
   },
   "peerDependenciesMeta": {
     "@junctionjs/debug": {
