@@ -67,6 +67,7 @@ export function clearEvents(): void {
 function noopDestination(name: string, consent: string[]): Destination<Record<string, never>> {
   return {
     name,
+    version: "0.0.0",
     consent,
     runtime: "client",
     init() {},
