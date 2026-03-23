@@ -78,7 +78,6 @@ function noopDestination(name: string, consent: string[]): Destination<Record<st
   };
 }
 
-export const simulatedGA4 = noopDestination("ga4", ["analytics"]);
 export const simulatedAmplitude = noopDestination("amplitude", ["analytics"]);
 export const simulatedMeta = noopDestination("meta", ["marketing"]);
 
