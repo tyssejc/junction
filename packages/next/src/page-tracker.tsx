@@ -19,14 +19,20 @@ export function PageTracker() {
   const searchParams = useSearchParams();
   const mounted = useRef(false);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: pathname and searchParams are intentional navigation triggers, not values used inside the effect
+  // Derive a single URL string so the effect fires exactly once per
+  // navigation. Using pathname and searchParams as separate deps can
+  // cause double-fires when Next.js updates them in separate renders.
+  const search = searchParams?.toString();
+  const url = search ? `${pathname}?${search}` : pathname;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: url is a derived navigation trigger combining pathname + searchParams
   useEffect(() => {
     if (!mounted.current) {
       mounted.current = true;
       return; // skip initial mount
     }
     client?.track("page", "viewed");
-  }, [pathname, searchParams, client]);
+  }, [url, client]);
 
   return null;
 }
