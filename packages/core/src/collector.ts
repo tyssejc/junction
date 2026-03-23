@@ -145,6 +145,12 @@ export function createCollector(options: CreateCollectorOptions): Collector {
       entry.destination.onConsent?.(state);
     }
 
+    // Flush the event buffer first so any buffered events enter the consent
+    // pipeline before we drain the queue. Without this, events that are still
+    // in the buffer when consent changes never enter the consent queue and
+    // miss the replay to newly-permitted destinations.
+    flushBuffer();
+
     // Drain and re-dispatch queued events synchronously.
     // Synchronous dispatch ensures consent state is consistent — if consent is
     // revoked before the next microtask, events won't leak to destinations.
