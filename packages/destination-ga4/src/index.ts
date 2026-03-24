@@ -196,16 +196,17 @@ function loadGtag(measurementId: string, gtagUrl?: string): void {
   if (typeof window === "undefined") return;
   if (typeof (window as any).gtag === "function") return;
 
-  // Initialize dataLayer and gtag stub.
-  // MUST use `arguments` (not rest params) — gtag.js expects Arguments objects
-  // in the dataLayer queue, not arrays. Using an arrow function with ...args
-  // pushes plain arrays which gtag.js silently ignores.
+  // Initialize dataLayer and gtag stub matching Google's official snippet exactly.
+  // The stub MUST use `arguments` (not rest params) — gtag.js expects Arguments
+  // objects in the dataLayer queue, not plain arrays. Arrow functions and rest
+  // params produce arrays which gtag.js silently ignores.
   (window as any).dataLayer = (window as any).dataLayer || [];
-  // biome-ignore lint/style/noArguments: gtag.js requires the Arguments object
-  (window as any).gtag = () => {
+  function gtagStub(..._: unknown[]) {
+    // biome-ignore lint/style/noArguments: gtag.js requires the Arguments object, not an Array
     (window as any).dataLayer.push(arguments);
-  };
-  (window as any).gtag("js", new Date());
+  }
+  (window as any).gtag = gtagStub;
+  gtagStub("js", new Date());
 
   // Load script
   const script = document.createElement("script");
