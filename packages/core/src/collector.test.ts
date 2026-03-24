@@ -688,7 +688,7 @@ describe("Collector", () => {
       vi.advanceTimersByTime(3000);
 
       const event = (dest.transform as any).mock.calls[0][0] as JctEvent;
-      expect(event.context.consent).toEqual({ analytics: true, marketing: false });
+      expect(event.context.consent).toEqual({ necessary: true, analytics: true, marketing: false });
     });
 
     it("does not include was_queued for non-queued events", () => {
@@ -740,7 +740,7 @@ describe("Collector", () => {
 
       const event = (dest.transform as any).mock.calls[0][0] as JctEvent;
       // The consent snapshot should reflect the resolved state, not the original pending state
-      expect(event.context.consent).toEqual({ analytics: true });
+      expect(event.context.consent).toEqual({ necessary: true, analytics: true });
     });
 
     it("consent snapshot reflects state at track() time, not dispatch time", () => {
@@ -759,7 +759,7 @@ describe("Collector", () => {
 
       const event = (dest.transform as any).mock.calls[0][0] as JctEvent;
       // Event was built with the state at track() time
-      expect(event.context.consent).toEqual({ analytics: true, marketing: false });
+      expect(event.context.consent).toEqual({ necessary: true, analytics: true, marketing: false });
     });
   });
 
@@ -784,7 +784,7 @@ describe("Collector", () => {
       collector.consent({ analytics: true });
 
       expect(update).toHaveBeenCalledTimes(1);
-      expect(update).toHaveBeenCalledWith({ analytics: true });
+      expect(update).toHaveBeenCalledWith({ necessary: true, analytics: true });
     });
 
     it("calls signal update() before destination onConsent()", () => {
@@ -901,7 +901,7 @@ describe("Collector", () => {
       const collector = createCollector(options);
 
       expect(() => collector.consent({ analytics: false })).not.toThrow();
-      expect(dest.onConsent).toHaveBeenCalledWith({ analytics: false });
+      expect(dest.onConsent).toHaveBeenCalledWith({ necessary: true, analytics: false });
     });
   });
 });
