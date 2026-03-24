@@ -1,5 +1,15 @@
 # @junctionjs/core
 
+## 0.3.0
+
+### Minor Changes
+
+- [#12](https://github.com/tyssejc/junction/pull/12) [`cc7d872`](https://github.com/tyssejc/junction/commit/cc7d87281c3ffe9ab658af7ad7632b306b13254d) Thanks [@tyssejc](https://github.com/tyssejc)! - feat(core): add consent queue guardrails — maxQueueSize, queue:drop telemetry, flush() drains queue
+
+  - Add `maxQueueSize` option to `ConsentConfig` — drops oldest events when exceeded
+  - Emit `queue:drop` events with `{ count, reason }` when events are lost to timeout or overflow
+  - `flush()` now drains the consent queue for permitted events, critical for page unload
+
 ## 0.2.1
 
 ### Patch Changes

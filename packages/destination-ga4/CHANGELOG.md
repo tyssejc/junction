@@ -1,5 +1,23 @@
 # @junctionjs/destination-ga4
 
+## 2.0.0
+
+### Patch Changes
+
+- [#11](https://github.com/tyssejc/junction/pull/11) [`7c8cb06`](https://github.com/tyssejc/junction/commit/7c8cb068ddea6142935ad355d8dd491ff6ba2b2a) Thanks [@tyssejc](https://github.com/tyssejc)! - Fix gtag.js integration: use Arguments object instead of Array for dataLayer
+
+  The gtag stub function was using an arrow function with rest parameters, which
+  pushed plain Arrays to the dataLayer. gtag.js silently ignores array entries —
+  it expects the Arguments object. Switched to a named function declaration using
+  `arguments` to match Google's official snippet.
+
+  Also added `gtag("consent", "default", {...})` call before `gtag("config", ...)`
+  when consent mode is enabled. Without this, gtag.js doesn't know consent mode
+  is active and consent state is never communicated to Google.
+
+- Updated dependencies [[`cc7d872`](https://github.com/tyssejc/junction/commit/cc7d87281c3ffe9ab658af7ad7632b306b13254d)]:
+  - @junctionjs/core@0.3.0
+
 ## 1.0.0
 
 ### Patch Changes

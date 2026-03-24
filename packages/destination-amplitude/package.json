@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/destination-amplitude",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Amplitude Analytics destination for Junction — HTTP API, client + server",
   "type": "module",
   "main": "dist/index.js",
@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@junctionjs/core": "^0.2.0"
+    "@junctionjs/core": "^0.3.0"
   },
   "devDependencies": {
     "@junctionjs/core": "*",
