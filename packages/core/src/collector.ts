@@ -126,6 +126,15 @@ export function createCollector(options: CreateCollectorOptions): Collector {
   // Start initialization (fire and forget — destinations buffer until ready)
   const initPromise = initDestinations();
 
+  // ── Queue drop telemetry ─────────────────────────────────
+
+  consent.onDrop((count, reason) => {
+    emit("queue:drop", { count, reason });
+    if (config.debug) {
+      console.warn(`[Junction] Dropped ${count} queued event(s): ${reason}`);
+    }
+  });
+
   // ── Consent change handler ─────────────────────────────
 
   consent.onChange((state, _previous) => {
@@ -383,6 +392,26 @@ export function createCollector(options: CreateCollectorOptions): Collector {
     async flush(): Promise<void> {
       await initPromise; // ensure destinations are ready
       flushBuffer();
+
+      // Also drain the consent queue — any events where consent is now
+      // granted get dispatched. Critical for page unload: the client calls
+      // flush() on pagehide, and we need to dispatch everything we can.
+      const queued = consent.drain();
+      if (queued.length > 0) {
+        for (const { event, sentTo } of queued) {
+          const updatedEvent = {
+            ...event,
+            user: { ...user },
+            context: {
+              ...event.context,
+              was_queued: true,
+              consent: consent.getState(),
+            },
+          };
+          dispatchToDestinations(updatedEvent, sentTo);
+        }
+        emit("queue:flush", { count: queued.length });
+      }
     },
 
     async shutdown(): Promise<void> {

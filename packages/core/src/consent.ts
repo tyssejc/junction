@@ -23,7 +23,10 @@ export interface QueuedEvent {
   sentTo: Set<string>;
 }
 
+export type DropReason = "timeout" | "overflow";
+
 type ConsentListener = (state: ConsentState, previous: ConsentState) => void;
+type DropListener = (count: number, reason: DropReason) => void;
 
 export interface ConsentManager {
   /** Get current consent state */
@@ -50,6 +53,9 @@ export interface ConsentManager {
   /** Subscribe to consent changes */
   onChange: (listener: ConsentListener) => () => void;
 
+  /** Subscribe to queue drop events (timeout or overflow) */
+  onDrop: (listener: DropListener) => () => void;
+
   /** Number of queued events */
   queueSize: () => number;
 
@@ -63,6 +69,7 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
   let state: ConsentState = { necessary: true, ...config.defaultState };
   let queue: QueuedEvent[] = [];
   const listeners = new Set<ConsentListener>();
+  const dropListeners = new Set<DropListener>();
 
   // Check DNT/GPC on creation
   if (typeof globalThis.navigator !== "undefined") {
@@ -74,6 +81,16 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
     }
   }
 
+  function notifyDrop(count: number, reason: DropReason): void {
+    for (const listener of dropListeners) {
+      try {
+        listener(count, reason);
+      } catch (e) {
+        console.error("[Junction] Drop listener error:", e);
+      }
+    }
+  }
+
   // Queue cleanup timer — expire old events
   let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -81,7 +98,12 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
     _cleanupTimer = setInterval(
       () => {
         const now = Date.now();
+        const before = queue.length;
         queue = queue.filter((item) => now - item.queuedAt < config.queueTimeout);
+        const dropped = before - queue.length;
+        if (dropped > 0) {
+          notifyDrop(dropped, "timeout");
+        }
       },
       Math.min(config.queueTimeout, 30_000),
     );
@@ -161,6 +183,14 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
         for (const name of sentTo) existing.sentTo.add(name);
         return;
       }
+
+      // Enforce max queue size — drop oldest events to make room
+      if (config.maxQueueSize && config.maxQueueSize > 0 && queue.length >= config.maxQueueSize) {
+        const overflow = queue.length - config.maxQueueSize + 1;
+        queue.splice(0, overflow);
+        notifyDrop(overflow, "overflow");
+      }
+
       queue.push({ event, queuedAt: Date.now(), sentTo: new Set(sentTo) });
     },
 
@@ -174,6 +204,13 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
+      };
+    },
+
+    onDrop(listener: DropListener) {
+      dropListeners.add(listener);
+      return () => {
+        dropListeners.delete(listener);
       };
     },
 

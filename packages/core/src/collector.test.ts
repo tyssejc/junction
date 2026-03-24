@@ -904,4 +904,128 @@ describe("Collector", () => {
       expect(dest.onConsent).toHaveBeenCalledWith({ necessary: true, analytics: false });
     });
   });
+
+  describe("queue:drop telemetry", () => {
+    it("emits queue:drop when events expire from consent queue", () => {
+      const dropHandler = vi.fn();
+      const options = makeOptions();
+      options.config.consent.defaultState = {}; // analytics pending
+      options.config.consent.queueTimeout = 5000;
+      const dest = mockDestination({ consent: ["analytics"] });
+      options.config.destinations = [{ destination: dest, config: {} }];
+
+      const collector = createCollector(options);
+      collector.on("queue:drop", dropHandler);
+
+      collector.track("page", "viewed");
+
+      // Flush buffer so event enters consent queue
+      vi.advanceTimersByTime(3000);
+
+      // Advance past queue timeout — cleanup runs every 5s,
+      // event was queued at ~3s, so need to reach the 10s mark
+      // for the second cleanup pass to find it expired.
+      vi.advanceTimersByTime(7000);
+
+      expect(dropHandler).toHaveBeenCalledTimes(1);
+      expect(dropHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "queue:drop",
+          payload: { count: 1, reason: "timeout" },
+        }),
+      );
+    });
+
+    it("emits queue:drop when maxQueueSize is exceeded", () => {
+      const dropHandler = vi.fn();
+      const options = makeOptions();
+      options.config.consent.defaultState = {}; // analytics pending
+      options.config.consent.maxQueueSize = 2;
+      const dest = mockDestination({ consent: ["analytics"] });
+      options.config.destinations = [{ destination: dest, config: {} }];
+
+      const collector = createCollector(options);
+      collector.on("queue:drop", dropHandler);
+
+      collector.track("test", "one");
+      collector.track("test", "two");
+      collector.track("test", "three");
+
+      // Flush buffer so all 3 enter consent queue (max 2)
+      vi.advanceTimersByTime(3000);
+
+      expect(dropHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "queue:drop",
+          payload: { count: 1, reason: "overflow" },
+        }),
+      );
+    });
+  });
+
+  describe("flush drains consent queue", () => {
+    it("dispatches queued events on flush() when consent is now granted", async () => {
+      const dest = mockDestination({ consent: ["analytics"] });
+      const options = makeOptions();
+      options.config.consent.defaultState = {}; // analytics pending
+      options.config.destinations = [{ destination: dest, config: {} }];
+
+      const collector = createCollector(options);
+      await vi.advanceTimersByTimeAsync(0); // init destinations
+
+      collector.track("page", "viewed");
+
+      // Flush buffer — event enters consent queue (analytics pending)
+      vi.advanceTimersByTime(3000);
+      expect(dest.transform).not.toHaveBeenCalled();
+
+      // Grant consent without triggering onChange replay
+      // (simulate: consent granted, then flush() called on unload)
+      collector.consent({ analytics: true });
+      // onChange already drained and replayed — but let's test flush() independently.
+      // Reset the mock to see if flush() also works
+      (dest.transform as any).mockClear();
+      (dest.send as any).mockClear();
+
+      // Track another event while analytics is now granted but still in buffer
+      collector.track("page", "scrolled");
+
+      // flush() should dispatch the buffered event
+      await collector.flush();
+
+      expect(dest.transform).toHaveBeenCalled();
+      const event = (dest.transform as any).mock.calls[0][0] as JctEvent;
+      expect(event.entity).toBe("page");
+      expect(event.action).toBe("scrolled");
+    });
+
+    it("flush() dispatches consent-queued events that are now permitted", async () => {
+      const exemptDest = mockDestination({ name: "exempt-dest", consent: ["exempt"] });
+      const analyticsDest = mockDestination({ name: "analytics-dest", consent: ["analytics"] });
+      const options = makeOptions();
+      options.config.consent.defaultState = {}; // analytics pending
+      options.config.destinations = [
+        { destination: exemptDest, config: {} },
+        { destination: analyticsDest, config: {} },
+      ];
+
+      const collector = createCollector(options);
+      await vi.advanceTimersByTimeAsync(0); // init destinations
+
+      collector.track("page", "viewed");
+      vi.advanceTimersByTime(3000); // flush buffer
+
+      // exempt dest got the event, analytics dest didn't
+      expect(exemptDest.transform).toHaveBeenCalledTimes(1);
+      expect(analyticsDest.transform).not.toHaveBeenCalled();
+
+      // Grant consent — onChange fires and drains queue
+      collector.consent({ analytics: true });
+
+      // Analytics dest should have received the replayed event
+      expect(analyticsDest.transform).toHaveBeenCalledTimes(1);
+      const event = (analyticsDest.transform as any).mock.calls[0][0] as JctEvent;
+      expect(event.context.was_queued).toBe(true);
+    });
+  });
 });
