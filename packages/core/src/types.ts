@@ -158,6 +158,13 @@ export interface ConsentConfig {
   signals?: ConsentSignal[];
 
   /**
+   * Max number of events to hold in the consent queue.
+   * When exceeded, the oldest events are dropped (with a `queue:drop` event).
+   * Default: no limit.
+   */
+  maxQueueSize?: number;
+
+  /**
    * Strict GDPR mode. When true:
    * - Event queuing is disabled (pending = denied)
    * - Events only dispatch to destinations with explicitly granted consent
@@ -461,6 +468,7 @@ export type CollectorEvent =
   | "destination:error" // destination send failed
   | "destination:init" // destination initialized
   | "queue:flush" // consent queue flushed
+  | "queue:drop" // events dropped from consent queue (timeout or overflow)
   | "error"; // any error
 
 export type CollectorEventHandler = (data: {

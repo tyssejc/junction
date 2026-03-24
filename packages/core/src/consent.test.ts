@@ -461,4 +461,102 @@ describe("ConsentManager", () => {
       expect(listener).not.toHaveBeenCalled();
     });
   });
+
+  describe("queue drop telemetry", () => {
+    it("emits drop event when events expire from queue", () => {
+      const dropListener = vi.fn();
+      manager = createConsentManager(makeConfig({ queueTimeout: 5000 }));
+      manager.onDrop(dropListener);
+
+      manager.enqueue(makeEvent({ id: "evt-1" }), new Set());
+      manager.enqueue(makeEvent({ id: "evt-2" }), new Set());
+
+      // Advance past the queue timeout
+      vi.advanceTimersByTime(6000);
+
+      expect(dropListener).toHaveBeenCalledTimes(1);
+      expect(dropListener).toHaveBeenCalledWith(2, "timeout");
+      expect(manager.queueSize()).toBe(0);
+    });
+
+    it("does not emit drop event when no events expired", () => {
+      const dropListener = vi.fn();
+      manager = createConsentManager(makeConfig({ queueTimeout: 10_000 }));
+      manager.onDrop(dropListener);
+
+      manager.enqueue(makeEvent({ id: "evt-1" }), new Set());
+
+      // Advance but not past timeout
+      vi.advanceTimersByTime(5000);
+
+      expect(dropListener).not.toHaveBeenCalled();
+      expect(manager.queueSize()).toBe(1);
+    });
+
+    it("unsubscribes drop listener", () => {
+      const dropListener = vi.fn();
+      manager = createConsentManager(makeConfig({ queueTimeout: 5000 }));
+      const unsub = manager.onDrop(dropListener);
+
+      manager.enqueue(makeEvent({ id: "evt-1" }), new Set());
+      unsub();
+
+      vi.advanceTimersByTime(6000);
+
+      expect(dropListener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("maxQueueSize", () => {
+    it("drops oldest events when queue exceeds maxQueueSize", () => {
+      const dropListener = vi.fn();
+      manager = createConsentManager(makeConfig({ maxQueueSize: 3 }));
+      manager.onDrop(dropListener);
+
+      manager.enqueue(makeEvent({ id: "evt-1" }), new Set());
+      manager.enqueue(makeEvent({ id: "evt-2" }), new Set());
+      manager.enqueue(makeEvent({ id: "evt-3" }), new Set());
+      expect(manager.queueSize()).toBe(3);
+      expect(dropListener).not.toHaveBeenCalled();
+
+      // Adding a 4th should drop the oldest
+      manager.enqueue(makeEvent({ id: "evt-4" }), new Set());
+
+      expect(manager.queueSize()).toBe(3);
+      expect(dropListener).toHaveBeenCalledWith(1, "overflow");
+
+      // Verify the oldest was dropped: drain and check IDs
+      const drained = manager.drain();
+      expect(drained.map((q) => q.event.id)).toEqual(["evt-2", "evt-3", "evt-4"]);
+    });
+
+    it("does not enforce limit when maxQueueSize is not set", () => {
+      manager = createConsentManager(makeConfig());
+
+      for (let i = 0; i < 50; i++) {
+        manager.enqueue(makeEvent({ id: `evt-${i}` }), new Set());
+      }
+
+      expect(manager.queueSize()).toBe(50);
+    });
+
+    it("drops multiple oldest when queue is far over limit", () => {
+      const dropListener = vi.fn();
+      manager = createConsentManager(makeConfig({ maxQueueSize: 2 }));
+      manager.onDrop(dropListener);
+
+      // Fill to capacity
+      manager.enqueue(makeEvent({ id: "evt-1" }), new Set());
+      manager.enqueue(makeEvent({ id: "evt-2" }), new Set());
+
+      // Add one more — should drop 1
+      manager.enqueue(makeEvent({ id: "evt-3" }), new Set());
+
+      expect(dropListener).toHaveBeenCalledWith(1, "overflow");
+      expect(manager.queueSize()).toBe(2);
+
+      const drained = manager.drain();
+      expect(drained.map((q) => q.event.id)).toEqual(["evt-2", "evt-3"]);
+    });
+  });
 });
