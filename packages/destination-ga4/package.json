@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/destination-ga4",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Google Analytics 4 destination for Junction — gtag.js, Measurement Protocol, Consent Mode v2",
   "type": "module",
   "main": "dist/index.js",
@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@junctionjs/core": "^0.2.0"
+    "@junctionjs/core": "^0.3.0"
   },
   "devDependencies": {
     "@junctionjs/core": "*",
