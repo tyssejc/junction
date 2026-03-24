@@ -1,13 +1,15 @@
 import { readConsentCookie } from "@/components/consent/use-consent-cookie";
 import type { CollectorConfig } from "@junctionjs/core";
+import { ga4 } from "@junctionjs/destination-ga4";
 import { contracts } from "./contracts";
-import { demoSink, simulatedAmplitude, simulatedGA4, simulatedMeta } from "./demo-sink";
+import { demoSink, simulatedAmplitude, simulatedMeta } from "./demo-sink";
 
 /**
  * Junction collector configuration for the Orbit Supply demo.
  *
  * The demo-sink (exempt) always receives events for visualization.
- * Simulated GA4/Amplitude/Meta destinations are consent-gated so the
+ * GA4 is a real destination gated on NEXT_PUBLIC_GA4_MEASUREMENT_ID env var.
+ * Simulated Amplitude/Meta destinations are consent-gated so the
  * consent queue actually works: events queue while pending, flush on
  * grant, and drop on deny.
  */
@@ -32,9 +34,21 @@ export const junctionConfig: CollectorConfig = {
       consent: ["exempt"],
       enabled: true,
     },
-    // Simulated consent-gated destinations — no-op send, but their consent
-    // requirements drive the queue/flush/drop behavior visible in the demo.
-    { destination: simulatedGA4, config: {}, enabled: true },
+    // Real GA4 — gated on env var so the demo works without it.
+    ...(process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID
+      ? [
+          {
+            destination: ga4,
+            config: {
+              measurementId: process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID,
+              sendPageView: false,
+              consentMode: true,
+            },
+            consent: ["analytics"],
+            enabled: true,
+          },
+        ]
+      : []),
     { destination: simulatedAmplitude, config: {}, enabled: true },
     { destination: simulatedMeta, config: {}, enabled: true },
   ],

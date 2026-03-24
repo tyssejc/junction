@@ -196,12 +196,17 @@ function loadGtag(measurementId: string, gtagUrl?: string): void {
   if (typeof window === "undefined") return;
   if (typeof (window as any).gtag === "function") return;
 
-  // Initialize dataLayer
+  // Initialize dataLayer and gtag stub matching Google's official snippet exactly.
+  // The stub MUST use `arguments` (not rest params) — gtag.js expects Arguments
+  // objects in the dataLayer queue, not plain arrays. Arrow functions and rest
+  // params produce arrays which gtag.js silently ignores.
   (window as any).dataLayer = (window as any).dataLayer || [];
-  (window as any).gtag = (...args: any[]) => {
-    (window as any).dataLayer.push(args);
-  };
-  (window as any).gtag("js", new Date());
+  function gtagStub(..._: unknown[]) {
+    // biome-ignore lint/style/noArguments: gtag.js requires the Arguments object, not an Array
+    (window as any).dataLayer.push(arguments);
+  }
+  (window as any).gtag = gtagStub;
+  gtagStub("js", new Date());
 
   // Load script
   const script = document.createElement("script");
@@ -231,19 +236,33 @@ export function createGA4(): Destination<GA4Config> {
         throw new Error("[Junction:GA4] measurementId is required");
       }
 
+      consentModeEnabled = config.consentMode === true;
+
       // Client-side: load gtag.js if needed
       if (typeof window !== "undefined" && config.loadScript !== false) {
         loadGtag(config.measurementId, config.gtagUrl);
+
+        // Set consent defaults BEFORE config — required by Google's consent mode v2.
+        // Without this, gtag doesn't know consent mode is active.
+        if (consentModeEnabled) {
+          (window as any).gtag("consent", "default", {
+            ad_storage: "denied",
+            analytics_storage: "denied",
+            ad_user_data: "denied",
+            ad_personalization: "denied",
+            personalization_storage: "denied",
+            functionality_storage: "granted",
+            security_storage: "granted",
+          });
+        }
 
         // Configure GA4
         const gtagConfig: Record<string, unknown> = {
           send_page_view: config.sendPageView ?? false,
         };
 
-        (window as any).gtag?.("config", config.measurementId, gtagConfig);
+        (window as any).gtag("config", config.measurementId, gtagConfig);
       }
-
-      consentModeEnabled = config.consentMode === true;
     },
 
     transform(event: JctEvent, config: GA4Config) {
