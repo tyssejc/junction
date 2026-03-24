@@ -50,7 +50,7 @@ describe("ConsentManager", () => {
 
     it("starts with empty state when no defaults provided", () => {
       manager = createConsentManager(makeConfig());
-      expect(manager.getState()).toEqual({});
+      expect(manager.getState()).toEqual({ necessary: true });
     });
   });
 
@@ -69,7 +69,7 @@ describe("ConsentManager", () => {
       manager = createConsentManager(makeConfig({ defaultState: { analytics: false } }));
 
       manager.setState({ analytics: true });
-      expect(manager.getState()).toEqual({ analytics: true });
+      expect(manager.getState()).toEqual({ necessary: true, analytics: true });
     });
 
     it("notifies listeners on change", () => {
@@ -80,7 +80,7 @@ describe("ConsentManager", () => {
       manager.setState({ analytics: true });
 
       expect(listener).toHaveBeenCalledTimes(1);
-      expect(listener).toHaveBeenCalledWith({ analytics: true }, {});
+      expect(listener).toHaveBeenCalledWith({ necessary: true, analytics: true }, { necessary: true });
     });
 
     it("passes previous state to listeners", () => {
@@ -388,7 +388,7 @@ describe("ConsentManager", () => {
       vi.advanceTimersByTime(3500);
 
       expect(listener).toHaveBeenCalledTimes(1);
-      expect(manager.getState()).toEqual({ analytics: false, marketing: false });
+      expect(manager.getState()).toEqual({ necessary: true, analytics: false, marketing: false });
     });
 
     it("cancels fallback timer when setState() is called before timeout", () => {
@@ -410,7 +410,7 @@ describe("ConsentManager", () => {
       // Advance past fallback timeout — should NOT fire again
       vi.advanceTimersByTime(6000);
       expect(listener).toHaveBeenCalledTimes(1);
-      expect(manager.getState()).toEqual({ analytics: true, marketing: true });
+      expect(manager.getState()).toEqual({ necessary: true, analytics: true, marketing: true });
     });
 
     it("does not apply fallback when not configured", () => {

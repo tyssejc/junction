@@ -60,7 +60,7 @@ export interface ConsentManager {
 // ─── Implementation ──────────────────────────────────────────────
 
 export function createConsentManager(config: ConsentConfig): ConsentManager {
-  let state: ConsentState = { ...config.defaultState };
+  let state: ConsentState = { necessary: true, ...config.defaultState };
   let queue: QueuedEvent[] = [];
   const listeners = new Set<ConsentListener>();
 
@@ -117,14 +117,15 @@ export function createConsentManager(config: ConsentConfig): ConsentManager {
 
       // Merge — don't replace. This allows incremental consent updates
       // (e.g., user grants analytics first, marketing later).
-      state = { ...state, ...update };
+      // "necessary" is always granted — external callers cannot override it.
+      state = { ...state, ...update, necessary: true };
 
       notify(previous);
     },
 
     reset() {
       const previous = { ...state };
-      state = { ...config.defaultState };
+      state = { necessary: true, ...config.defaultState };
       queue = [];
       notify(previous);
     },
