@@ -1,0 +1,40 @@
+# Product Mission
+
+## Problem
+
+Analytics implementation infrastructure is broken for scaling technical teams. Legacy tag managers (GTM, Adobe Launch) were built for marketers adding snippets to websites — they rely on opaque UIs, brittle rule-based logic, and workflows that don't fit into modern engineering practices. As companies grow, this creates:
+
+- **No version control** — GTM workspaces and Adobe's "Latest" model make it impossible to know who changed what, when, or why
+- **No validation** — typos, missing fields, and type mismatches silently corrupt analytics data, discovered weeks later when funnels break
+- **Consent as afterthought** — bolted-on consent modes that fragment implementation and create compliance risk
+- **Vendor lock-in** — proprietary systems where configuration can't be reviewed in PRs, tested in CI, or deployed through standard pipelines
+
+At the other end, full CDPs (Segment, RudderStack, Tealium) solve some of these problems but introduce more scope, cost, and organizational overhead than most scaling companies need.
+
+Meanwhile, AI agents are rapidly becoming how scaling companies build and ship software. No existing event collection layer is designed for agent-driven implementation. Tag managers require point-and-click UIs that agents can't operate. CDPs require complex configuration flows optimized for humans navigating dashboards. The companies most likely to adopt Junction — technical, growth-stage startups — are also the fastest adopters of AI-assisted development. There's a first-mover opportunity to build the event layer that agents can instrument natively.
+
+## Target Users
+
+Technical growth-stage startups and scaling companies that are:
+
+- Engineering-led or product-led
+- Beyond "just install GA4" but not ready for full CDP complexity
+- Running multiple analytics and marketing destinations
+- Uncomfortable with brittle tag-manager sprawl or ad hoc tracking
+- Interested in code-first, AI-friendly development workflows
+
+Primary champions: founders, engineering leads, growth engineers, analytics owners, and heads of data at smaller companies.
+
+Best-fit segments: B2B SaaS, PLG startups, headless/technical ecommerce, companies with both product analytics and marketing destinations.
+
+## Solution
+
+Junction is the first event collection layer designed from the ground up to be implemented by both developers and AI agents. It gives scaling companies more control than legacy tag managers and less overhead than a full CDP.
+
+- **Agent-native** — TypeScript config, typed interfaces, schema contracts, and deterministic behavior make Junction trivial for AI agents to instrument, wire up destinations, and validate correctness. No UIs to click through, no ambiguous config formats to interpret.
+- **Config as code** — tracking configuration lives in TypeScript files, reviewed in PRs, deployed through CI/CD
+- **Typed events** — Zod schema contracts enforce event shapes at runtime, catching data quality issues at the source
+- **Consent-first** — a first-class consent state machine that queues events until consent resolves, with per-destination gating and DNT/GPC respected by default
+- **Isomorphic** — the same collector runs in browsers, Node.js, Deno, Cloudflare Workers, and Bun
+- **Destination-agnostic** — simple plugin interface lets teams add, swap, or remove analytics and marketing destinations without re-instrumenting
+- **CDP-compatible, not CDP-scoped** — integrates with warehouses, profile systems, and downstream tools without trying to become the whole stack
