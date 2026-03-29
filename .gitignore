@@ -18,6 +18,9 @@ tsup.config.bundled_*.mjs
 .DS_Store
 Thumbs.db
 
+# Cursor
+.cursor/
+
 # Editor
 .vscode/
 !.vscode/settings.json
