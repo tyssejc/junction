@@ -1,0 +1,80 @@
+---
+title: Philosophy
+description: The design principles, trade-offs, and opinionated defaults behind Junction.
+---
+
+## Why Junction exists
+
+Analytics implementation infrastructure is broken for scaling technical teams. Legacy tag managers were built for marketers adding snippets to websites — they rely on opaque UIs, brittle rule-based logic, and workflows that don't fit into modern engineering practices. Full CDPs solve some of these problems but introduce more scope, cost, and organizational overhead than most scaling companies need.
+
+Junction occupies the gap: more control than a tag manager, less overhead than a CDP.
+
+## Design principles
+
+**Events are the primitive, not tags.** Traditional tag management says "fire a tag when a condition is met." Junction inverts this: you emit typed events, and destinations decide what to do with them. This decouples instrumentation from vendor-specific concerns and makes consent gating, schema validation, and destination hot-swapping possible.
+
+**Config as code, not config as UI state.** Your entire analytics configuration lives in TypeScript files under version control. Changes go through PRs, get reviewed, and deploy via CI/CD. This solves the Adobe Launch "Latest" problem and GTM's opaque workspace model. If you can't `git diff` it, you can't trust it.
+
+**Consent is a state machine, not a flag.** Consent isn't a boolean you check once. It's a reactive system where state changes over time, events queue while decisions are pending, and destinations independently gate on the categories they require. Junction treats this as a first-class runtime concern, not an afterthought bolted on after the fact.
+
+**Schema validation catches errors at the source.** Define contracts per event using Zod. Invalid events are caught before they reach any destination — not discovered weeks later when a funnel breaks or a revenue report shows $0. This is the single biggest gap in every existing tag management system.
+
+**Plain objects, not classes.** Destinations are factory functions that return plain objects. This makes them tree-shakeable, composable, and easy to test. No inheritance hierarchies, no `this` binding surprises, no framework lock-in.
+
+**One global, not two.** Some libraries put multiple objects on the window (`dataLayer` + `gtag`, `elb` + `walker`). Junction exposes a single `window.jct` that is the collector. Track events, manage consent, identify users — all from one object.
+
+## Opinionated defaults
+
+Junction ships with strong defaults that prioritize correctness and user privacy. You can opt out of any of them, but the defaults are intentional.
+
+| Default | Why | Override |
+|---------|-----|----------|
+| Consent starts as `pending` | Events should queue until the user makes a choice, not fire optimistically | Set `consent.default` to `granted` per category |
+| DNT/GPC respected | Browser privacy signals should mean something | Disable in consent config |
+| Strict validation drops invalid events | Bad data shouldn't silently corrupt your analytics | Use `lenient` mode to warn instead |
+| System events filtered from destinations | Internal lifecycle events are not vendor analytics | Return `null` from `transform()` (already the convention) |
+| ESM only | Tree-shaking, modern bundlers, no dual-package hazard | None — this is non-negotiable |
+
+These defaults exist because the cost of getting them wrong is high and silent. A dropped event is visible. A corrupted event is not.
+
+## Trade-offs we accept
+
+Every design choice has a cost. Here's where Junction intentionally trades one thing for another.
+
+**Code-first means no GUI.** There is no drag-and-drop interface for configuring destinations or building event rules. If your team needs a marketer-operated UI to manage tags, Junction is not the right tool. We believe the teams who benefit most from Junction are already comfortable with TypeScript and pull requests.
+
+**Typed events mean more upfront work.** Defining entity:action pairs and Zod schemas takes more effort than pushing an object into a `dataLayer`. The payoff is that your analytics implementation is self-documenting, self-validating, and refactorable. The work shifts from "debug broken funnels" to "define contracts once."
+
+**Consent-first means some events may never fire.** If a user denies consent, marketing destinations get nothing. Junction won't help you work around that. The queue exists to defer events while consent is pending, not to circumvent user choices.
+
+**Destination-agnostic means no deep vendor integrations.** Junction's destination interface is intentionally simple: `init`, `transform`, `send`. It won't configure your GA4 custom dimensions or manage your Amplitude taxonomies. It handles collection, validation, consent, and delivery — what happens inside the vendor is the vendor's domain.
+
+## What Junction is not
+
+Clarity about scope is as important as the feature list.
+
+- **Not a CDP.** No identity resolution, no customer profiles, no audience building, no activation workflows. Junction is CDP-compatible — it can feed data into one — but it doesn't try to become one.
+- **Not a customer 360.** Junction doesn't unify user identities across devices or channels. It passes identity information (anonymous IDs, user IDs) to destinations, which handle resolution in their own systems.
+- **Not a tag manager replacement for non-technical teams.** If your analytics workflow depends on a UI that marketers operate directly, Junction adds friction rather than removing it.
+- **Not trying to out-Segment Segment.** The goal is not to build the broadest platform. It's to be the best implementation layer for teams that want speed, control, and correctness.
+
+## What Junction will become
+
+Junction should own: implementation, collection, validation, consent-aware routing, observability, and developer workflow.
+
+Junction should remain: CDP-compatible, warehouse-friendly, and identity-ready at the event level.
+
+Junction should not become responsible for: profiles, audiences, customer unification, or activation. At least not in the near term. These are important capabilities, but they belong in the tools that specialize in them.
+
+## The agent-native thesis
+
+AI agents are rapidly becoming how scaling companies build and ship software. No existing event collection layer is designed for agent-driven implementation.
+
+Tag managers require point-and-click UIs that agents can't operate. CDPs require complex configuration flows optimized for humans navigating dashboards. Junction is different:
+
+- **TypeScript config** — agents read and write code natively
+- **Typed interfaces** — agents can discover and use the API without documentation
+- **Schema contracts** — agents can validate their own instrumentation
+- **Deterministic behavior** — no hidden state, no UI-dependent side effects
+
+The companies most likely to adopt Junction are also the fastest adopters of AI-assisted development. Junction is built to meet them where they are.
