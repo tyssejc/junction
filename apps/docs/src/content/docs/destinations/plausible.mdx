@@ -1,0 +1,57 @@
+---
+title: Plausible
+description: Privacy-first analytics with Plausible — no cookies, no consent banner required.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+:::note
+Full documentation coming soon.
+:::
+
+## Install
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install @junctionjs/destination-plausible
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @junctionjs/destination-plausible
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @junctionjs/destination-plausible
+    ```
+  </TabItem>
+</Tabs>
+
+## Usage
+
+```typescript
+import { createCollector } from "@junctionjs/core";
+import { plausible } from "@junctionjs/destination-plausible";
+
+const collector = createCollector({
+  destinations: [
+    {
+      destination: plausible({
+        domain: "example.com",
+      }),
+    },
+  ],
+});
+```
+
+## Features
+
+- **Plausible Events API** — sends events via Plausible's server-side API
+- **Privacy-focused** — no cookies, no PII, GDPR-friendly by design
+- **Custom events** — map Junction events to Plausible custom event names
+- **Custom properties** — forward up to 30 custom props per event
+- **Revenue tracking** — attach currency and amount to conversion events
+- **Self-hosted support** — configurable API host for self-hosted Plausible instances
+- **Consent: analytics** — gated behind analytics consent category
