@@ -1,0 +1,61 @@
+---
+title: Validation
+description: Zod-based schema contracts for event data quality.
+---
+
+## Why Validate?
+
+Without validation, data quality issues are discovered weeks later when a funnel breaks, a report shows $0 revenue, or a destination silently drops malformed events. Junction catches these at the source.
+
+## Schema Contracts
+
+Define contracts per entity+action pair using Zod:
+
+```typescript
+import { z } from "zod";
+
+const schemas = {
+  "product:added": {
+    version: "1.0.0",
+    mode: "strict",
+    schema: z.object({
+      product_id: z.string().min(1),
+      name: z.string().min(1),
+      price: z.number().nonnegative(),
+      currency: z.string().length(3),
+      quantity: z.number().int().positive(),
+    }),
+  },
+};
+```
+
+## Validation Modes
+
+| Mode | Invalid Event Behavior |
+|------|----------------------|
+| `strict` | Event is dropped, error logged |
+| `lenient` | Warning logged, event passes through |
+
+Use `strict` for critical events (purchases, sign-ups) and `lenient` during development or for non-critical events.
+
+## What This Prevents
+
+| Scenario | Without Validation | With Junction |
+|----------|-------------------|---------------|
+| `addToCart` instead of `product:added` | Funnel breaks silently | Type error + runtime validation |
+| Price sent as string `"19.99"` | Destination coerces unpredictably | Zod catches it |
+| Missing `product_id` | GA4 event fires without item_id | Contract rejects, logged |
+| New dev forgets `currency` field | Revenue reports show $0 | Strict mode blocks the event |
+
+## Adding Contracts to Your Config
+
+```typescript
+import { createClient } from "@junctionjs/client";
+
+const jct = createClient({
+  schemas,
+  destinations: [/* ... */],
+});
+```
+
+Events without a matching contract pass through unvalidated. Add contracts incrementally — start with your most critical events.

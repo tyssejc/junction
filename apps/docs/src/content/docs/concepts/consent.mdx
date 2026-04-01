@@ -1,0 +1,77 @@
+---
+title: Consent
+description: Junction's consent state machine and event queuing.
+---
+
+## Consent-First Design
+
+Consent in Junction is not an afterthought bolted onto an existing system. It's a first-class state machine that controls event flow from the moment the collector initializes.
+
+## State Machine
+
+```
+                    ┌─────────┐
+          Initial → │ PENDING │ ← No explicit choice yet
+                    └────┬────┘
+                         │
+              ┌──────────┴──────────┐
+              ▼                     ▼
+        ┌───────────┐        ┌───────────┐
+        │  GRANTED  │        │  DENIED   │
+        └───────────┘        └───────────┘
+              │                     │
+              └──────────┬──────────┘
+                         ▼
+                  Can change at any time
+                  (user updates preferences)
+```
+
+Every consent category starts in a configurable default state (typically `pending`). Events are queued until consent resolves.
+
+## Consent Categories
+
+| Category | Description | Example Destinations |
+|----------|-------------|---------------------|
+| `necessary` | Always allowed | Error tracking |
+| `analytics` | Site usage analytics | Amplitude, GA4 |
+| `marketing` | Advertising and retargeting | Meta Pixel, Google Ads |
+| `personalization` | Content personalization | Optimizely, LaunchDarkly |
+| `social` | Social media features | Share widgets |
+
+## Event Queuing
+
+When consent is pending:
+
+1. Events are queued in memory (with configurable size limits)
+2. When consent resolves, queued events are replayed to permitted destinations
+3. User properties on queued events are updated (identity may have changed since queuing)
+4. Destinations receive an `onConsent()` callback to sync their own consent state
+
+## Setting Consent
+
+```typescript
+// From your CMP callback or consent banner
+jct.consent({
+  analytics: "granted",
+  marketing: "denied",
+  personalization: "granted",
+});
+```
+
+## Per-Destination Consent
+
+Each destination declares which consent categories it requires:
+
+```typescript
+{
+  destination: ga4,
+  config: { measurementId: "G-XXXXXXXXXX" },
+  consent: ["analytics"],  // requires analytics consent
+}
+```
+
+A destination only receives events when **all** its required categories are granted (AND logic).
+
+## DNT and GPC
+
+Junction respects `Do Not Track` and `Global Privacy Control` signals by default. When these signals are detected, marketing and analytics consent categories are automatically denied.
