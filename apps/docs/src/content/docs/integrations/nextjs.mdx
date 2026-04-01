@@ -1,0 +1,31 @@
+---
+title: Next.js
+description: Junction integration for Next.js applications.
+---
+
+## Install
+
+```bash
+npm install @junctionjs/next @junctionjs/client @junctionjs/core
+```
+
+## Usage
+
+```typescript
+import { createClient } from "@junctionjs/client";
+import { ga4 } from "@junctionjs/destination-ga4";
+
+const jct = createClient({
+  destinations: [
+    {
+      destination: ga4,
+      config: { measurementId: "G-XXXXXXXXXX" },
+      consent: ["analytics"],
+    },
+  ],
+});
+```
+
+See the [demo app](https://github.com/tyssejc/junction/tree/main/apps/demo) for a full Next.js reference implementation.
+
+Full documentation coming soon.
