@@ -1,0 +1,67 @@
+---
+title: Meta Pixel + CAPI
+description: Send events to Meta via the Pixel (client) and Conversions API (server).
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+:::note
+Full documentation coming soon.
+:::
+
+## Install
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install @junctionjs/destination-meta
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @junctionjs/destination-meta
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @junctionjs/destination-meta
+    ```
+  </TabItem>
+</Tabs>
+
+## Usage
+
+```typescript
+import { createCollector } from "@junctionjs/core";
+import { meta } from "@junctionjs/destination-meta";
+
+const collector = createCollector({
+  destinations: [
+    {
+      destination: meta,
+      config: {
+        pixelId: "YOUR_PIXEL_ID",
+        accessToken: "YOUR_CAPI_ACCESS_TOKEN",
+      },
+    },
+  ],
+});
+```
+
+## Features
+
+- **Meta Pixel** — client-side event tracking via `fbq()`
+- **Conversions API (CAPI)** — server-side event delivery for improved signal quality
+- **Event deduplication** — shared `event_id` between Pixel and CAPI prevents double-counting
+- **Standard events** — default mapping to Meta's standard event names
+- **Advanced matching** — optional hashed PII (email, phone) for better attribution
+- **Consent: marketing** — requires marketing consent before sending
+
+## Default Event Mapping
+
+| Junction Event | Meta Event |
+|---|---|
+| `page:viewed` | `PageView` |
+| `product:viewed` | `ViewContent` |
+| `product:added` | `AddToCart` |
+| `order:completed` | `Purchase` |

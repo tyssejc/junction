@@ -1,0 +1,60 @@
+---
+title: HTTP (Generic)
+description: Send events to any HTTP endpoint — webhooks, custom APIs, or self-hosted analytics.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+:::note
+Full documentation coming soon.
+:::
+
+## Install
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install @junctionjs/destination-http
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @junctionjs/destination-http
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @junctionjs/destination-http
+    ```
+  </TabItem>
+</Tabs>
+
+## Usage
+
+```typescript
+import { createCollector } from "@junctionjs/core";
+import { http } from "@junctionjs/destination-http";
+
+const collector = createCollector({
+  destinations: [
+    {
+      destination: http({
+        url: "https://your-api.example.com/events",
+        headers: {
+          Authorization: "Bearer YOUR_TOKEN",
+        },
+      }),
+    },
+  ],
+});
+```
+
+## Features
+
+- **Any HTTP endpoint** — POST events to webhooks, custom APIs, or third-party services
+- **Configurable headers** — static headers or dynamic per-event headers via `headersFn`
+- **Configurable method** — POST, PUT, or PATCH
+- **Custom body transform** — reshape event payloads before sending
+- **Custom serializer** — swap out `JSON.stringify` for any format
+- **Webhooks** — ideal for Slack, Discord, or any webhook-based integration
+- **Error handling** — `onError` callback for non-2xx responses

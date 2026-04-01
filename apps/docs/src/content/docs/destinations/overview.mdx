@@ -1,0 +1,93 @@
+---
+title: Destinations
+description: How Junction routes events to analytics providers and APIs.
+---
+
+Destinations are where Junction sends your events. Each destination is a plain object with three async functions — `init`, `transform`, and `send` — wired together by the collector at runtime.
+
+## Available Destinations
+
+| Destination | Package | Runtime |
+|-------------|---------|---------|
+| Google Analytics 4 | `@junctionjs/destination-ga4` | Client + Server |
+| Amplitude | `@junctionjs/destination-amplitude` | Client + Server |
+| Meta Pixel + CAPI | `@junctionjs/destination-meta` | Client + Server |
+| Plausible | `@junctionjs/destination-plausible` | Client |
+| HTTP (Generic) | `@junctionjs/destination-http` | Server |
+
+## Configuration Pattern
+
+Every destination is registered on the collector via its config:
+
+```typescript
+import { createCollector } from "@junctionjs/core";
+import { ga4 } from "@junctionjs/destination-ga4";
+
+const collector = createCollector({
+  destinations: [
+    {
+      destination: ga4,
+      config: {
+        measurementId: "G-XXXXXXXXXX",
+      },
+    },
+  ],
+});
+```
+
+Destinations are factory functions or pre-built objects — never classes. This keeps them tree-shakeable and easy to test.
+
+## Event Name Mapping
+
+All destinations use a **3-tier fallback** to resolve event names:
+
+1. **Config override** — `config.eventNameMap["product:viewed"]` takes priority
+2. **Default map** — each destination ships with sensible defaults for common events
+3. **Generated name** — if no mapping exists, the name is derived from `entity_action` (or a destination-specific format)
+
+```typescript
+// Example: override a single event name for GA4
+{
+  destination: ga4,
+  config: {
+    measurementId: "G-XXXXXXXXXX",
+    eventNameMap: {
+      "product:viewed": "my_custom_view_item",
+    },
+  },
+}
+```
+
+### Default Event Mapping
+
+| Junction Event | GA4 | Amplitude | Meta |
+|---|---|---|---|
+| `page:viewed` | `page_view` | `Page Viewed` | `PageView` |
+| `product:viewed` | `view_item` | `Product Viewed` | `ViewContent` |
+| `product:added` | `add_to_cart` | `Product Added` | `AddToCart` |
+| `order:completed` | `purchase` | `Order Completed` | `Purchase` |
+
+## System Events
+
+The `_system` entity is reserved for Junction's internal lifecycle events (e.g., `_system:initialized`). All destinations must return `null` from `transform()` for system events — they are never forwarded to external providers.
+
+## Writing a Custom Destination
+
+Junction destinations implement the `Destination` interface:
+
+```typescript
+interface Destination<TConfig> {
+  name: string;
+  version: string;
+  consent: ConsentCategory[];
+  runtime: "client" | "server" | "both";
+
+  init: (config: TConfig) => Promise<void> | void;
+  transform: (event: JctEvent, config: TConfig) => unknown | null;
+  send: (payload: unknown, config: TConfig) => Promise<void>;
+  onConsent?: (state: ConsentState) => void;
+  teardown?: () => Promise<void> | void;
+}
+```
+
+See the [Contributing Guide](https://github.com/tyssejc/junction/blob/main/CONTRIBUTING.md) for the full walkthrough on building a new destination.

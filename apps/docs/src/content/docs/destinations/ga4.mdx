@@ -1,0 +1,67 @@
+---
+title: Google Analytics 4
+description: Send events to GA4 via gtag.js (client) or Measurement Protocol (server).
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+:::note
+Full documentation coming soon.
+:::
+
+## Install
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install @junctionjs/destination-ga4
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @junctionjs/destination-ga4
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @junctionjs/destination-ga4
+    ```
+  </TabItem>
+</Tabs>
+
+## Usage
+
+```typescript
+import { createCollector } from "@junctionjs/core";
+import { ga4 } from "@junctionjs/destination-ga4";
+
+const collector = createCollector({
+  destinations: [
+    {
+      destination: ga4,
+      config: {
+        measurementId: "G-XXXXXXXXXX",
+        consentMode: true,
+      },
+    },
+  ],
+});
+```
+
+## Features
+
+- **gtag.js** — automatically loads the gtag snippet on the client (configurable)
+- **Measurement Protocol** — server-side sending via GA4's HTTP API
+- **Consent Mode v2** — native integration with Google's consent signals
+- **Recommended events** — default mapping for GA4's recommended event names
+- **Event name overrides** — customize any mapping via `eventNameMap`
+- **Custom script URL** — self-host or proxy the gtag.js script
+
+## Default Event Mapping
+
+| Junction Event | GA4 Event |
+|---|---|
+| `page:viewed` | `page_view` |
+| `product:viewed` | `view_item` |
+| `product:added` | `add_to_cart` |
+| `order:completed` | `purchase` |

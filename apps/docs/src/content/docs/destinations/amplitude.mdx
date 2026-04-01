@@ -1,0 +1,66 @@
+---
+title: Amplitude
+description: Send events to Amplitude via the Browser SDK (client) or HTTP V2 API (server).
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+:::note
+Full documentation coming soon.
+:::
+
+## Install
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install @junctionjs/destination-amplitude
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @junctionjs/destination-amplitude
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @junctionjs/destination-amplitude
+    ```
+  </TabItem>
+</Tabs>
+
+## Usage
+
+```typescript
+import { createCollector } from "@junctionjs/core";
+import { amplitude } from "@junctionjs/destination-amplitude";
+
+const collector = createCollector({
+  destinations: [
+    {
+      destination: amplitude,
+      config: {
+        apiKey: "YOUR_AMPLITUDE_API_KEY",
+        mode: "client",
+      },
+    },
+  ],
+});
+```
+
+## Features
+
+- **Browser SDK** — client-side via Amplitude's official `@amplitude/analytics-browser`
+- **HTTP V2 API** — server-side sending with no SDK dependency
+- **User and session mapping** — forwards Junction identity and session data to Amplitude
+- **Event name format** — configurable: `snake_case`, `Title Case`, `entity:action`, or custom function
+- **Event name overrides** — customize any mapping via config
+
+## Default Event Mapping
+
+| Junction Event | Amplitude Event |
+|---|---|
+| `page:viewed` | `Page Viewed` |
+| `product:viewed` | `Product Viewed` |
+| `product:added` | `Product Added` |
+| `order:completed` | `Order Completed` |
