@@ -1,0 +1,46 @@
+---
+title: Astro
+description: Junction integration for Astro v5+ with View Transitions support.
+---
+
+## Install
+
+```bash
+npm install @junctionjs/astro @junctionjs/client @junctionjs/core
+```
+
+## Setup
+
+Add the Junction integration to your Astro config:
+
+```javascript
+// astro.config.mjs
+import { defineConfig } from "astro/config";
+import junction from "@junctionjs/astro";
+
+export default defineConfig({
+  integrations: [
+    junction({
+      debug: true,
+    }),
+  ],
+});
+```
+
+## Features
+
+- Automatic script injection at `before-hydration`
+- SSR middleware for session, geo, and IP enrichment
+- View Transitions support — page views tracked on every navigation
+- Server-side `/api/collect` endpoint
+- CSP-compatible (no `unsafe-inline` needed)
+
+## Exports
+
+| Export | Description |
+|--------|-------------|
+| `@junctionjs/astro` | Astro integration (script injection, middleware) |
+| `@junctionjs/astro/middleware` | SSR middleware for server-side enrichment |
+| `@junctionjs/astro/collect-endpoint` | Server-side collect API route |
+
+Full documentation coming soon.
