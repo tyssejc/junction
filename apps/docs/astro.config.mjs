@@ -28,6 +28,7 @@ export default defineConfig({
         {
           label: "Concepts",
           items: [
+            { label: "Philosophy", link: "/concepts/philosophy/" },
             { label: "Events", link: "/concepts/events/" },
             { label: "Consent", link: "/concepts/consent/" },
             { label: "Validation", link: "/concepts/validation/" },
