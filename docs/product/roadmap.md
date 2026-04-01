@@ -17,28 +17,37 @@ The core open-source product is built and functional:
 - Auto-collect module
 - Monorepo with CI/CD, Changesets for versioning, npm publishing
 
-## Phase 2: Validation Sprint (Current — 90-Day Plan)
+## Phase 2: Validation Sprint (Current — 90-Day Plan, Mar 30 – Jun 27 2026)
 
-### Tier 1: Must-do now
+Goal: make Junction production-ready for design partner adoption. A design partner can deploy and operate Junction; a prospect can evaluate it end-to-end in under 10 minutes.
 
-- **PostHog destination** — broadens story beyond martech into product analytics; strengthens "one event layer for product + growth"
-- **Observability / debugging MVP** — live event stream, payload inspection, validation errors, consent-blocking visibility, destination delivery status, human-readable failure explanations
-- **Hosted gateway / runtime MVP** — managed ingestion endpoint, credential handling, delivery logs, retries, basic health status
-- **Reference implementations** — Next.js SaaS example, Astro example, ecommerce/headless example (each showing schemas, consent, multi-destination, debug workflow)
-- **Docs and quickstart improvements** — make the product understandable in one short session
+### Phase 2.1: PostHog Destination (Days 1–20, Mar 30 – Apr 18)
 
-### Tier 2: Build next
+- `@junctionjs/destination-posthog` — client-side (posthog-js) and server-side (API) event capture
+- Standard destination interface, entity:action mapping, consent configuration
+- Demo app updated, docs page, published to npm
 
-- Additional destinations based on design partner signal (candidates: Mixpanel, HubSpot, LinkedIn Ads, Segment-as-destination, RudderStack-as-destination)
-- Schema/contract ergonomics — easier authoring, reusable patterns, starter templates, better validation messages
-- Consent implementation experience — cookbooks, common consent modes, GPC/DNT examples
-- Migration helpers — GTM-to-Junction guide, Adobe Launch-to-Junction guide, event inventory templates
+### Phase 2.2: Hosted Gateway + Observability (Days 21–60, Apr 19 – May 28)
 
-### Tier 3: Differentiators to layer in
+- Cloudflare Workers deployment with Hono, credential management, API key auth
+- Durable event log, retry logic for failed deliveries
+- Observability API: recent events, delivery status, validation errors, consent-blocked events
+- Lightweight dashboard UI with human-readable error explanations
+- Health endpoint, rate limiting, CORS, deployment playbook
 
-- AI CLI helpers — config scaffolding from prompts, schema generation, error explanation
-- Destination mapping suggestions
-- Vertical templates (ecommerce, SaaS, PLG)
+### Phase 2.3: Adoption Surface (Days 61–90, May 29 – Jun 27)
+
+- **Reference implementation** — Next.js SaaS example showing full loop: client SDK → hosted gateway → PostHog + GA4, with consent flow and debug panel
+- **Docs** — reworked quickstart, GTM-to-Junction migration guide, gateway deployment guide
+- **Agentic instrumentation spike** — `CLAUDE.md` template for Junction users so AI assistants know how to instrument events correctly
+
+### Deferred to post-Phase 2
+
+- Additional destinations based on design partner signal (Mixpanel, HubSpot, LinkedIn Ads, Segment-as-destination)
+- Schema/contract ergonomics — easier authoring, reusable patterns, starter templates
+- Consent implementation cookbook
+- AI CLI tooling beyond the CLAUDE.md template
+- Team workflows / environments / audit trail
 
 ## Phase 3: Post-Launch Product Expansion
 
