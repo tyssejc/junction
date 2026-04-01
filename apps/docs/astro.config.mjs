@@ -1,12 +1,11 @@
-import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import { defineConfig } from "astro/config";
 
 export default defineConfig({
   integrations: [
     starlight({
       title: "Junction",
-      description:
-        "Developer-native event collection and routing for scaling teams.",
+      description: "Developer-native event collection and routing for scaling teams.",
       social: [
         {
           icon: "github",
@@ -21,9 +20,7 @@ export default defineConfig({
         { label: "What is Junction?", link: "/" },
         {
           label: "Getting Started",
-          items: [
-            { label: "Quickstart", link: "/getting-started/quickstart/" },
-          ],
+          items: [{ label: "Quickstart", link: "/getting-started/quickstart/" }],
         },
         {
           label: "Concepts",
