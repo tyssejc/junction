@@ -18,43 +18,45 @@ export default defineConfig({
         baseUrl: "https://github.com/tyssejc/junction/edit/main/apps/docs/",
       },
       sidebar: [
-        { label: "What is Junction?", slug: "index" },
+        { label: "What is Junction?", link: "/" },
         {
           label: "Getting Started",
-          items: [{ slug: "getting-started/quickstart" }],
+          items: [
+            { label: "Quickstart", link: "/getting-started/quickstart/" },
+          ],
         },
         {
           label: "Concepts",
           items: [
-            { slug: "concepts/events" },
-            { slug: "concepts/consent" },
-            { slug: "concepts/validation" },
-            { slug: "concepts/architecture" },
+            { label: "Events", link: "/concepts/events/" },
+            { label: "Consent", link: "/concepts/consent/" },
+            { label: "Validation", link: "/concepts/validation/" },
+            { label: "Architecture", link: "/concepts/architecture/" },
           ],
         },
         {
           label: "Destinations",
           items: [
-            { slug: "destinations/overview" },
-            { slug: "destinations/ga4" },
-            { slug: "destinations/amplitude" },
-            { slug: "destinations/meta" },
-            { slug: "destinations/plausible" },
-            { slug: "destinations/http" },
+            { label: "Overview", link: "/destinations/overview/" },
+            { label: "GA4", link: "/destinations/ga4/" },
+            { label: "Amplitude", link: "/destinations/amplitude/" },
+            { label: "Meta", link: "/destinations/meta/" },
+            { label: "Plausible", link: "/destinations/plausible/" },
+            { label: "HTTP", link: "/destinations/http/" },
           ],
         },
         {
           label: "Integrations",
           items: [
-            { slug: "integrations/nextjs" },
-            { slug: "integrations/astro" },
+            { label: "Next.js", link: "/integrations/nextjs/" },
+            { label: "Astro", link: "/integrations/astro/" },
           ],
         },
         {
           label: "Product",
           items: [
-            { slug: "product/mission" },
-            { slug: "product/roadmap" },
+            { label: "Mission", link: "/product/mission/" },
+            { label: "Roadmap", link: "/product/roadmap/" },
           ],
         },
       ],

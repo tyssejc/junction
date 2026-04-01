@@ -1,0 +1,98 @@
+---
+title: Quickstart
+description: Install Junction and fire your first event in under 5 minutes.
+---
+
+## Install
+
+```bash
+npm install @junctionjs/client @junctionjs/core
+```
+
+Add a destination — for example, GA4:
+
+```bash
+npm install @junctionjs/destination-ga4
+```
+
+## Configure
+
+Create a Junction configuration file:
+
+```typescript
+// lib/junction.ts
+import { createClient } from "@junctionjs/client";
+import { ga4 } from "@junctionjs/destination-ga4";
+
+export const jct = createClient({
+  destinations: [
+    {
+      destination: ga4,
+      config: {
+        measurementId: "G-XXXXXXXXXX",
+        sendPageView: false,
+      },
+      consent: ["analytics"],
+    },
+  ],
+  consent: {
+    default: "pending",
+  },
+});
+```
+
+## Track events
+
+Use the entity:action model to track events:
+
+```typescript
+import { jct } from "./lib/junction";
+
+// Page view
+jct.track("page", "viewed");
+
+// User action
+jct.track("product", "added", {
+  product_id: "SKU-123",
+  name: "Junction T-Shirt",
+  price: 29.99,
+  currency: "USD",
+});
+```
+
+## Manage consent
+
+Update consent state when a user interacts with your consent banner:
+
+```typescript
+jct.consent({
+  analytics: "granted",
+  marketing: "denied",
+});
+```
+
+Events queued while consent was pending are automatically flushed to permitted destinations.
+
+## Add the debug panel
+
+```bash
+npm install @junctionjs/debug
+```
+
+Enable it in your config:
+
+```typescript
+const jct = createClient({
+  debug: true, // shows the in-page debug panel
+  // ... rest of config
+});
+```
+
+Press `Ctrl+Shift+J` to toggle the debug panel and inspect events in real time.
+
+## Next steps
+
+- [Events](/concepts/events/) — understand the entity:action model
+- [Consent](/concepts/consent/) — how the consent state machine works
+- [Validation](/concepts/validation/) — add schema contracts
+- [Destinations](/destinations/overview/) — see all available destinations

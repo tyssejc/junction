@@ -1,0 +1,73 @@
+---
+title: What is Junction?
+description: Developer-native event collection and routing for scaling teams.
+template: splash
+hero:
+  tagline: More control than a tag manager. Less overhead than a CDP.
+  actions:
+    - text: Get Started
+      link: /getting-started/quickstart/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/tyssejc/junction
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## Why Junction?
+
+Junction is a TypeScript event collection layer for scaling technical teams. Config-as-code, consent-first, isomorphic, destination-agnostic.
+
+<CardGrid>
+  <Card title="Config as code" icon="pencil">
+    Tracking configuration lives in TypeScript, reviewed in PRs, deployed
+    through CI/CD. No opaque UIs or workspace mysteries.
+  </Card>
+  <Card title="Typed events" icon="approve-check">
+    Zod schema contracts enforce event shapes at runtime, catching data quality
+    issues at the source — not weeks later when a funnel breaks.
+  </Card>
+  <Card title="Consent-first" icon="warning">
+    A first-class consent state machine queues events until consent resolves,
+    with per-destination gating and DNT/GPC respected by default.
+  </Card>
+  <Card title="Runs anywhere" icon="rocket">
+    The same collector runs in browsers, Node.js, Deno, Cloudflare Workers, and
+    Bun. One implementation, every runtime.
+  </Card>
+</CardGrid>
+
+## Who is it for?
+
+Technical growth-stage startups and scaling companies that are:
+
+- Engineering-led or product-led
+- Beyond "just install GA4" but not ready for full CDP complexity
+- Running multiple analytics and marketing destinations
+- Interested in code-first, AI-friendly development workflows
+
+## How it works
+
+All events use a typed entity:action model:
+
+```typescript
+import { createClient } from "@junctionjs/client";
+
+const jct = createClient({
+  destinations: [ga4, amplitude, meta],
+  consent: { default: "pending" },
+});
+
+// Entity:action — not flat strings
+jct.track("product", "viewed", {
+  product_id: "SKU-123",
+  name: "Junction T-Shirt",
+  price: 29.99,
+  currency: "USD",
+});
+```
+
+Destinations transform and deliver events independently. Consent gates control which destinations receive data. Schema contracts validate every event before it leaves the client.
