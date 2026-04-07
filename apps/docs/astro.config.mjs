@@ -23,6 +23,12 @@ export default defineConfig({
           items: [{ label: "Quickstart", link: "/getting-started/quickstart/" }],
         },
         {
+          label: "Guides",
+          items: [
+            { label: "Integration Guide", link: "/guides/integration/" },
+          ],
+        },
+        {
           label: "Concepts",
           items: [
             { label: "Philosophy", link: "/concepts/philosophy/" },
