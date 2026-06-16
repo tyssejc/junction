@@ -1,0 +1,222 @@
+---
+title: Integration Guide
+description: End-to-end guide for adding Junction to your application — package selection, framework wiring, consent, contracts, destinations, and common pitfalls.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+This guide walks through adding Junction to an application from scratch: choosing packages, wiring your framework, configuring consent and contracts, and avoiding common mistakes.
+
+## Decision tree: what to install
+
+```
+Need analytics in the browser?
+├─ No (server-only / edge-only)
+│  └─ createCollector from @junctionjs/core
+│     (+ @junctionjs/gateway if proxying from clients)
+└─ Yes
+   ├─ Astro 5+        → @junctionjs/astro + destinations
+   ├─ Next.js 14+     → @junctionjs/next + @junctionjs/client + destinations
+   ├─ React SPA / Vite → @junctionjs/client + destinations (Context provider pattern)
+   └─ Non-React browser → @junctionjs/client + destinations
+
+Need to accept events from the browser on the server (secrets, enrichment)?
+└─ Yes → @junctionjs/gateway (WinterCG) or app-specific API + createCollector on server
+
+Need automatic DOM signals (clicks, scroll, web vitals)?
+└─ @junctionjs/auto-collect (pass the collector/client)
+
+Need in-page debugging?
+└─ @junctionjs/debug
+```
+
+### Minimum packages for a typical marketing site
+
+- `@junctionjs/client` (browser) **or** `@junctionjs/core` (isomorphic/server)
+- One or more `@junctionjs/destination-*` packages
+- `zod` if you define **contracts**
+- `@junctionjs/core` is usually pulled transitively; add explicitly for types
+
+---
+
+## Client vs. server vs. edge
+
+| Concern | Prefer |
+|---------|--------|
+| UI engagement, page views, client SDKs (gtag, `fbq`) | **Client** — `@junctionjs/client` or framework glue |
+| **Secrets** (Measurement Protocol API secret, CAPI access tokens) | **Server or gateway** — never embed in public bundles |
+| **IP / geo / raw UA** enrichment | **Server middleware** (Astro), **gateway**, or your API |
+| Ad blockers / third-party script reliability | **Dual**: client best-effort + **server** duplicate where vendor supports it (e.g. Meta CAPI + Pixel, GA4 MP + gtag) |
+| Edge latency, unified collect URL | **`@junctionjs/gateway`** on Workers / Deno / Vercel Edge / Bun |
+| GDPR-strict "no queue before consent" | `consent.strictMode: true` (disables pending queue) |
+
+**`Destination.runtime`** on each plugin is `"client" | "server" | "both"` — match where you register it.
+
+---
+
+## Framework wiring
+
+### Browser — `@junctionjs/client`
+
+- **`createClient(ClientConfig)`** wraps `createCollector` with persistent anonymousId, session, page/device/UTM context.
+- **`autoPageView`**: fires initial `page:viewed`, listens to `popstate`, patches `history.pushState`, handles `astro:page-load`.
+- Optional **`beaconUrl`** + `sendBeacon` on page hide for collect pipelines.
+- **React / SPA**: create **once** in `useEffect`, `shutdown()` on unmount, expose via Context.
+
+### Next.js — `@junctionjs/next`
+
+- **`JunctionProvider`** — wraps `createClient({ ...config, autoPageView: false })` (routing handled separately).
+- **`PageTracker`** — inside provider + `Suspense`; uses `usePathname` / `useSearchParams`, fires `track("page", "viewed")` on client navigations (skips first mount to reduce double counts).
+- **`useJunction()`** — access client from client components.
+- Optional **debug** prop mounts `@junctionjs/debug`.
+- Peers: `next`, `react`, `@junctionjs/client`, `@junctionjs/core`, optional `@junctionjs/debug`.
+
+### Astro — `@junctionjs/astro`
+
+- **`junction({ config, ... })`** in `astro.config.mjs`.
+- Client destinations use **`package` + `config`** (resolved at build time) — do **not** put server secrets in serialized client config.
+- Subpaths: **`@junctionjs/astro/middleware`**, **`@junctionjs/astro/collect-endpoint`** for SSR context and `/api/collect`-style forwarding.
+- View Transitions aligned with client auto page view via `astro:page-load`.
+
+### Server / edge — `@junctionjs/gateway`
+
+- **`createGateway({ destinations, collector, cors, auth, ... })`** → `handleRequest` for `fetch` handlers.
+- Typical pattern: browser sends events to your worker; gateway runs server-mode destinations with secrets; enrich with IP/UA/geo.
+- Collector consent on gateway often uses **`queueTimeout: 0`** when trust boundary is already server-side.
+
+### Isomorphic core — `@junctionjs/core`
+
+- **`createCollector({ config, source, resolveContext? })`** when you're not in the browser (Node scripts, tests, custom SSR, gateway).
+- Implement **`resolveContext`** to attach request-derived fields to `EventContext`.
+
+---
+
+## Event contracts (Zod)
+
+<Aside type="tip" title="Terminology: strict contracts vs. strictMode consent">
+  **Contracts** have a `mode` field: `"strict"` drops invalid events, `"lenient"` warns and still sends. **Consent** has a separate `strictMode` flag that treats pending consent as denied. These are independent settings.
+</Aside>
+
+1. Define `EventContract[]`: `{ entity, action, version, schema: z.object(...), mode: "strict" | "lenient" }`.
+2. Pass as `contracts` on `CollectorConfig` (same object used by `createClient`).
+3. **Wildcard**: `action: "*"` applies to all actions for that entity if no exact key exists (exact wins when both registered — see `packages/core/src/validation.ts`).
+4. Reuse **`schemas`** from `@junctionjs/core` (`schemas.product`, `schemas.order`, `schemas.page`, `schemas.userTraits`) to stay consistent.
+5. Align entity/action with destination mappings (e.g. GA4 recommended events use `page:viewed`, `product:added`, etc.).
+
+---
+
+## Consent and CMP integration
+
+### ConsentConfig
+
+Configure on `CollectorConfig.consent`:
+
+| Option | Description |
+|--------|-------------|
+| `defaultState` | Initial categories before CMP runs |
+| `queueTimeout` | Milliseconds to retain queued pending events (`0` = no queue retention) |
+| `respectDNT` / `respectGPC` | Browser signals downgrade categories on init |
+| `strictMode` | Pending treated as denied — **no queuing** for compliance-sensitive deployments |
+| `consentFallback` | If CMP never loads, apply `state` after `timeout` ms |
+| `signals` | `ConsentSignal[]`: `init`, `update(state)`, `teardown` for vendor protocols |
+
+### Application code
+
+```typescript
+// When user saves preferences or CMP updates
+collector.consent({ analytics: true, marketing: false });
+
+// After login — queued replays attach updated user
+collector.identify(userId, traits);
+```
+
+### OneTrust — `@junctionjs/cmp-onetrust`
+
+- **`createOneTrustAdapter(collector, { categoryMap?, debug? })`** — browser only.
+- Wires `OneTrustGroupsUpdated`, `OptanonWrapper`, maps `OnetrustActiveGroups` → `ConsentState`.
+- Defaults: C0002 analytics, C0003 personalization, C0004 marketing, C0005 social.
+- Returns `destroy()` / `sync()` for SPA lifecycle.
+
+### Other CMPs (Cookiebot, Usercentrics, etc.)
+
+Use **`createCmpBridge`** from `@junctionjs/core`: implement `readState`, `subscribe`, `mapState` → `collector.consent(...)`. Mirror the OneTrust package pattern.
+
+### Vendor-specific consent APIs
+
+- **GA4**: `consentMode: true` on destination **or** `googleConsentMode({ waitForUpdate })` as a signal.
+- **Meta**: destination handles `fbq("consent", ...)` where applicable — see destination README.
+
+---
+
+## Destination reference
+
+For each destination, respect `consent` (and override on `DestinationEntry` if product/legal requires). A `transform` returning `null` skips the event.
+
+| Package | Default consent | Runtime | Key config |
+|---------|----------------|---------|------------|
+| `@junctionjs/destination-amplitude` | `["analytics"]` | `both` | `mode`, `secretKey` (server), `eventNameFormat`, `propertyMap` |
+| `@junctionjs/destination-ga4` | `["analytics", "marketing"]` | `both` | `measurementId`, `apiSecret` (MP), `consentMode`, `sendPageView` (usually `false`) |
+| `@junctionjs/destination-meta` | `["marketing"]` | `both` | `pixelId`, `accessToken` (server CAPI) |
+| `@junctionjs/destination-http` | configurable (`["analytics"]`) | configurable | `url`, `transform`, `headers` |
+| `@junctionjs/destination-plausible` | `["exempt"]` | server | `domain`, needs UA/IP from server context |
+
+### Registering in config
+
+```typescript
+destinations: [
+  {
+    destination: amplitude,
+    config: { /* package-specific */ },
+    consent: ["analytics"], // optional override of destination.consent
+    enabled: true,
+  },
+],
+```
+
+---
+
+## Optional add-ons
+
+### `@junctionjs/auto-collect`
+
+- **`createAutoCollect(collector, { clicks, scrollDepth, video, formSubmit, engagement, webVitals })`**
+- Events go through `track()` and normal destination gating — no separate consent logic.
+- Returns `destroy()` for teardown.
+
+### `@junctionjs/debug`
+
+- **`createDebugPanel(client, options)`** or Next `JunctionProvider` `debug` prop.
+- Inspects events, consent, destination health.
+
+---
+
+## Implementation checklist
+
+1. **Choose glue** — client / Next / Astro / gateway / hybrid.
+2. **List destinations** and where they run (client vs. server); never ship secrets to the browser.
+3. **Set consent** defaults, `queueTimeout` / `strictMode` / fallback per legal requirements.
+4. **Wire CMP** → `consent()` (OneTrust adapter or `createCmpBridge`).
+5. **Add vendor consent signals** if using GA4 consent mode or similar.
+6. **Define contracts** for high-value events (`"strict"` in prod recommended).
+7. **Use recommended entity:action pairs** for each vendor (see destination source `*_MAP` tables).
+8. **Verify** with `@junctionjs/debug`, browser network tab, vendor realtime/debug tools.
+9. **Avoid double page views** — Next: provider + `PageTracker` vs. raw `autoPageView`; watch React Strict Mode dev double mount.
+
+---
+
+## Anti-patterns
+
+- **Embedding secrets in client bundles** — API secrets, MP secrets, and access tokens must stay server-side.
+- **GA4 consent mismatch** — GA4 requires **both** `analytics` and `marketing` granted (AND logic). Setting only `analytics` means no GA4 sends until marketing is also granted, unless you override `consent` on the entry (understand privacy implications).
+- **Double page views** — Registering the same browser event to both gtag's automatic `page_view` and Junction's `page:viewed` without disabling one side (`sendPageView: false` on GA4).
+- **Assuming lenient contracts fix bad data** — they only warn; destinations still receive raw properties.
+- **Ignoring `shutdown()` in SPAs** — leaked listeners and duplicate globals on HMR.
+
+---
+
+## Extending Junction
+
+- **New vendor**: implement `Destination<TConfig>` (`init`, `transform`, `send`, optional `onConsent`, `teardown`) in a new `packages/destination-*` package; see root `README.md` stub.
+- **New framework**: mirror Next (provider + router hook) or Astro (integration + middleware + collect route).
+
+When unsure, read `packages/core/src/collector.ts` (dispatch pipeline) and `packages/core/src/consent.ts` (queue + allow/pending).

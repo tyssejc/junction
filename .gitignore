@@ -7,6 +7,9 @@ dist/
 # Turborepo
 .turbo/
 
+# Astro
+.astro/
+
 # tsup (config files are unused — builds use CLI flags)
 tsup.config.ts
 tsup.config.bundled_*.mjs
