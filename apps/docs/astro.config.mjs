@@ -24,9 +24,7 @@ export default defineConfig({
         },
         {
           label: "Guides",
-          items: [
-            { label: "Integration Guide", link: "/guides/integration/" },
-          ],
+          items: [{ label: "Integration Guide", link: "/guides/integration/" }],
         },
         {
           label: "Concepts",
