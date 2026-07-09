@@ -1,0 +1,45 @@
+{
+  "name": "@junctionjs/destination-posthog",
+  "version": "0.1.0",
+  "description": "PostHog destination for Junction — web (device-mode) and server (cloud-mode)",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --sourcemap --target es2022 --no-config --external @junctionjs/core",
+    "dev": "tsup src/index.ts --format esm --dts --watch --no-config --external @junctionjs/core",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@junctionjs/core": "^0.3.0"
+  },
+  "devDependencies": {
+    "@junctionjs/core": "*",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tyssejc/junction.git",
+    "directory": "packages/destination-posthog"
+  },
+  "keywords": ["analytics", "posthog", "product-analytics", "junction-destination"]
+}

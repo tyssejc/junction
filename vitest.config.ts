@@ -27,6 +27,7 @@ export default defineConfig({
       "@junctionjs/debug": path.resolve(__dirname, "packages/debug/src"),
       "@junctionjs/destination-http": path.resolve(__dirname, "packages/destination-http/src"),
       "@junctionjs/destination-plausible": path.resolve(__dirname, "packages/destination-plausible/src"),
+      "@junctionjs/destination-posthog": path.resolve(__dirname, "packages/destination-posthog/src"),
     },
   },
 });
