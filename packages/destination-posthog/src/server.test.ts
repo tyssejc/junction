@@ -1,6 +1,6 @@
 import type { JctEvent } from "@junctionjs/core";
-import { describe, expect, it } from "vitest";
-import { transformServerEvent } from "./server.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createPostHogServer, transformServerEvent } from "./server.js";
 
 function makeEvent(overrides?: Partial<JctEvent>): JctEvent {
   return {
@@ -66,5 +66,100 @@ describe("server transform", () => {
       eventNameMap: { "order:completed": "purchase" },
     });
     expect(result?.event).toBe("purchase");
+  });
+});
+
+describe("server factory", () => {
+  it("has correct defaults", () => {
+    const dest = createPostHogServer({ apiKey: "phc_test" });
+    expect(dest.name).toBe("posthog-server");
+    expect(dest.runtime).toBe("server");
+    expect(dest.consent).toEqual(["analytics"]);
+  });
+
+  it("throws on init when apiKey missing", () => {
+    const dest = createPostHogServer({ apiKey: "" });
+    expect(() => dest.init({} as any)).toThrow("apiKey is required");
+  });
+
+  it("honors a custom consent config", () => {
+    const dest = createPostHogServer({ apiKey: "k", consent: ["analytics", "marketing"] });
+    expect(dest.consent).toEqual(["analytics", "marketing"]);
+  });
+});
+
+describe("server send", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("POSTs a single event to /capture when batchSize is 1", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const dest = createPostHogServer({ apiKey: "phc_test", batchSize: 1 });
+    dest.init({} as any);
+    const payload = dest.transform(makeEvent({ entity: "product", action: "added" }), {} as any);
+    await dest.send(payload, {} as any);
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toBe("https://us.i.posthog.com/capture/");
+    const body = JSON.parse(options.body);
+    expect(body.api_key).toBe("phc_test");
+    expect(body.event).toBe("product_added");
+  });
+
+  it("buffers events and flushes to /batch when batchSize is reached", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const dest = createPostHogServer({ apiKey: "phc_test", batchSize: 2 });
+    dest.init({} as any);
+
+    await dest.send(dest.transform(makeEvent({ entity: "a", action: "x" }), {} as any), {} as any);
+    expect(mockFetch).not.toHaveBeenCalled(); // buffered, not yet flushed
+
+    await dest.send(dest.transform(makeEvent({ entity: "b", action: "y" }), {} as any), {} as any);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toBe("https://us.i.posthog.com/batch/");
+    const body = JSON.parse(options.body);
+    expect(body.batch).toHaveLength(2);
+  });
+
+  it("teardown flushes a partial buffer", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const dest = createPostHogServer({ apiKey: "phc_test", batchSize: 10 });
+    dest.init({} as any);
+    await dest.send(dest.transform(makeEvent({ entity: "a", action: "x" }), {} as any), {} as any);
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    await dest.teardown?.();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body).batch).toHaveLength(1);
+  });
+
+  it("uses the EU host when configured", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const dest = createPostHogServer({ apiKey: "k", host: "https://eu.i.posthog.com", batchSize: 1 });
+    dest.init({} as any);
+    await dest.send(dest.transform(makeEvent(), {} as any), {} as any);
+    expect(mockFetch.mock.calls[0][0]).toBe("https://eu.i.posthog.com/capture/");
+  });
+
+  it("retries on failure then throws after maxRetries", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 500, text: () => Promise.resolve("boom") });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const dest = createPostHogServer({ apiKey: "k", batchSize: 1, maxRetries: 2 });
+    dest.init({} as any);
+    await expect(dest.send(dest.transform(makeEvent(), {} as any), {} as any)).rejects.toThrow("500");
+    // initial attempt + 2 retries = 3 calls
+    expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 });
