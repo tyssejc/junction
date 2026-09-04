@@ -103,7 +103,7 @@ function loadSnippet(scriptUrl: string): void {
         key = parts[1];
       }
       target[key] = (...args: unknown[]) => {
-        target.push([key].concat(args));
+        target.push([key, ...args]);
       };
     };
     let u: any = stub;
