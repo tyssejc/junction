@@ -71,7 +71,7 @@ Canonical fields on every event:
 
 | Canonical | GA4 | Amplitude | PostHog |
 |---|---|---|---|
-| `anonymousId` | `client_id` | `device_id` | `distinct_id` (while anonymous) |
+| `anonymousId` | `client_id` | `device_id` | `distinct_id` (server; web uses posthog-js's own ID — see gap) |
 | `userId` | `user_id` | `user_id` | `distinct_id` after merge + `$identify` |
 | `traits` | `user_properties` | `user_properties` | person props via `$set` |
 | `user:identified` | no-op (carries `user_id`) | no-op (carries `user_id`) | `posthog.identify()` / `$identify` w/ `$anon_distinct_id` |
@@ -83,6 +83,12 @@ vendors (PostHog) must act on it to stitch anonymous history to the known person
 
 > **Known gap (tracked):** `UserIdentity` has no `sessionId`; GA4/Amplitude do not yet map
 > `session_id`/`$session_id`. Cross-destination follow-up, not owned by any single destination.
+
+> **Known gap (tracked):** web-mode (`createPostHogWeb`) delegates the anonymous
+> `distinct_id` to posthog-js's own cookie-managed ID rather than binding Junction's
+> `anonymousId` (posthog-js needs the ID at `init()`, before any event is seen), so
+> pre-identify web events won't correlate with server-mode events by `anonymousId`.
+> Reconcile via `bootstrap.distinctID` once the collector exposes `anonymousId` at init.
 
 ## Script Loading
 

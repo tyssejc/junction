@@ -67,6 +67,18 @@ describe("server transform", () => {
     });
     expect(result?.event).toBe("purchase");
   });
+
+  it("forwards device.userAgent as $raw_user_agent", () => {
+    const result = transformServerEvent(
+      makeEvent({
+        entity: "product",
+        action: "added",
+        context: { device: { userAgent: "Mozilla/5.0 (Test)" } } as JctEvent["context"],
+      }),
+      { apiKey: "k" },
+    );
+    expect(result?.properties.$raw_user_agent).toBe("Mozilla/5.0 (Test)");
+  });
 });
 
 describe("server factory", () => {
@@ -238,5 +250,35 @@ describe("server reliability", () => {
     expect(mockFetch.mock.calls[0][0]).toBe("https://us.i.posthog.com/batch/");
 
     vi.useRealTimers();
+  });
+
+  it("teardown awaits an in-flight flush from an un-awaited send", async () => {
+    // Controllable fetch: stays pending until we resolve it.
+    let resolveFetch!: (v: unknown) => void;
+    const fetchGate = new Promise((r) => {
+      resolveFetch = r;
+    });
+    const mockFetch = vi.fn().mockReturnValue(fetchGate);
+    vi.stubGlobal("fetch", mockFetch);
+
+    const dest = createPostHogServer({ apiKey: "k", batchSize: 1 });
+    dest.init({} as any);
+
+    // Fire-and-forget, exactly like the collector's dispatch — do NOT await.
+    const sendPromise = dest.send(dest.transform(makeEvent(), {} as any), {} as any);
+    expect(mockFetch).toHaveBeenCalledTimes(1); // flush started, fetch in flight
+
+    let torn = false;
+    const teardownPromise = (dest.teardown?.() as Promise<void>).then(() => {
+      torn = true;
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(torn).toBe(false); // teardown must still be waiting on the in-flight fetch
+
+    resolveFetch({ ok: true });
+    await teardownPromise;
+    await sendPromise.catch(() => {});
+    expect(torn).toBe(true);
   });
 });

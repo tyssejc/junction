@@ -61,10 +61,16 @@ export function transformServerEvent(event: JctEvent, config: PostHogServerConfi
     };
   }
 
+  const properties = buildEventProperties(event, { $lib: "junction-server" });
+  // Server capture: PostHog derives browser/OS/device from $raw_user_agent, not
+  // from our outbound request's UA. Forward the visitor's UA when present.
+  const userAgent = event.context.device?.userAgent;
+  if (userAgent) properties.$raw_user_agent = userAgent;
+
   return {
     event: getEventName(event, config.eventNameMap),
     distinct_id: distinctId,
-    properties: buildEventProperties(event, { $lib: "junction-server" }),
+    properties,
     timestamp: event.timestamp,
     uuid: event.id,
   };
@@ -133,6 +139,7 @@ export function createPostHogServer(config: PostHogServerConfig): Destination<Po
 
   let buffer: PostHogCaptureEvent[] = [];
   let timer: ReturnType<typeof setInterval> | undefined;
+  const pending = new Set<Promise<void>>();
 
   async function flush(): Promise<void> {
     if (buffer.length === 0) return;
@@ -140,11 +147,13 @@ export function createPostHogServer(config: PostHogServerConfig): Destination<Po
     buffer = [];
     const single = batchSize <= 1;
     const url = single ? `${host}/capture/` : `${host}/batch/`;
+    // Track the in-flight request so teardown() can await requests started by
+    // fire-and-forget send()s and the flush timer, not just the buffer it drains.
+    const request = postWithRetry(url, config.apiKey, batch, single, maxRetries);
+    pending.add(request);
     try {
-      await postWithRetry(url, config.apiKey, batch, single, maxRetries);
+      await request;
     } catch (err) {
-      // Don't drop the batch on an exhausted-retry failure — requeue it (ahead
-      // of anything buffered while we were awaiting) so a later flush retries.
       buffer = [...batch, ...buffer];
       if (buffer.length > maxBufferSize) {
         const dropped = buffer.length - maxBufferSize;
@@ -152,6 +161,8 @@ export function createPostHogServer(config: PostHogServerConfig): Destination<Po
         console.error(`[Junction:posthog-server] buffer exceeded ${maxBufferSize}; dropped ${dropped} oldest event(s)`);
       }
       throw err;
+    } finally {
+      pending.delete(request);
     }
   }
 
@@ -196,7 +207,13 @@ export function createPostHogServer(config: PostHogServerConfig): Destination<Po
         clearInterval(timer);
         timer = undefined;
       }
-      await flush();
+      // Drain whatever is buffered, then wait out any flush still in flight from
+      // a fire-and-forget send() or the timer — otherwise the runtime can exit
+      // while a request is mid-flight and silently lose those events.
+      await flush().catch((err) => {
+        console.error("[Junction:posthog-server] teardown flush failed:", err);
+      });
+      await Promise.allSettled([...pending]);
     },
   };
 }
