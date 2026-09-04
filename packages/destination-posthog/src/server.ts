@@ -26,6 +26,13 @@ export interface PostHogServerConfig extends PostHogBaseConfig {
 
   /** Retry a failed flush this many times with exponential backoff. Default 3. */
   maxRetries?: number;
+
+  /**
+   * Cap on events held in memory while flushes are failing. A failed flush
+   * requeues its batch rather than dropping it; once the buffer exceeds this,
+   * the oldest events are dropped (and logged) to bound memory. Default 1000.
+   */
+  maxBufferSize?: number;
 }
 
 export interface PostHogCaptureEvent {
@@ -65,6 +72,15 @@ export function transformServerEvent(event: JctEvent, config: PostHogServerConfi
 
 const BACKOFF_BASE_MS = 100;
 
+/**
+ * Retry rate limits (429) and server errors (5xx); those are transient. A 4xx
+ * like 401 (bad key) or 400/422 (malformed) will fail identically on every
+ * retry, so surface it immediately instead of burning the retry budget.
+ */
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
 async function postWithRetry(
   url: string,
   apiKey: string,
@@ -77,6 +93,9 @@ async function postWithRetry(
   let attempt = 0;
   // total attempts = 1 + maxRetries
   while (true) {
+    // Network/transport errors (fetch throws) are transient → retryable.
+    // A non-ok response sets this from its status before we throw.
+    let retryable = true;
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -84,10 +103,11 @@ async function postWithRetry(
         body,
       });
       if (response.ok) return;
+      retryable = isRetryableStatus(response.status);
       const text = await response.text();
       throw new Error(`[Junction:posthog-server] POST ${url} returned ${response.status}: ${text}`);
     } catch (err) {
-      if (attempt >= maxRetries) throw err;
+      if (!retryable || attempt >= maxRetries) throw err;
       attempt += 1;
       // exponential backoff: 100ms, 200ms, 400ms, ...
       await new Promise((resolve) => setTimeout(resolve, BACKOFF_BASE_MS * 2 ** (attempt - 1)));
@@ -109,6 +129,7 @@ export function createPostHogServer(config: PostHogServerConfig): Destination<Po
   const batchSize = config.batchSize ?? 20;
   const flushIntervalMs = config.flushIntervalMs ?? 5000;
   const maxRetries = config.maxRetries ?? 3;
+  const maxBufferSize = config.maxBufferSize ?? 1000;
 
   let buffer: PostHogCaptureEvent[] = [];
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -119,7 +140,19 @@ export function createPostHogServer(config: PostHogServerConfig): Destination<Po
     buffer = [];
     const single = batchSize <= 1;
     const url = single ? `${host}/capture/` : `${host}/batch/`;
-    await postWithRetry(url, config.apiKey, batch, single, maxRetries);
+    try {
+      await postWithRetry(url, config.apiKey, batch, single, maxRetries);
+    } catch (err) {
+      // Don't drop the batch on an exhausted-retry failure — requeue it (ahead
+      // of anything buffered while we were awaiting) so a later flush retries.
+      buffer = [...batch, ...buffer];
+      if (buffer.length > maxBufferSize) {
+        const dropped = buffer.length - maxBufferSize;
+        buffer = buffer.slice(dropped); // drop oldest to bound memory
+        console.error(`[Junction:posthog-server] buffer exceeded ${maxBufferSize}; dropped ${dropped} oldest event(s)`);
+      }
+      throw err;
+    }
   }
 
   return {
@@ -135,8 +168,11 @@ export function createPostHogServer(config: PostHogServerConfig): Destination<Po
       }
       if (batchSize > 1 && !timer) {
         timer = setInterval(() => {
+          // Always surface timer-driven flush failures. This path runs outside
+          // the collector's send() wrapper, so a swallowed error here would be
+          // completely invisible to operators.
           void flush().catch((err) => {
-            if (config.debug) console.error("[Junction:posthog-server] scheduled flush failed:", err);
+            console.error("[Junction:posthog-server] scheduled flush failed:", err);
           });
         }, flushIntervalMs);
         // Do not keep the Node process alive solely for the flush timer.

@@ -163,3 +163,80 @@ describe("server send", () => {
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 });
+
+describe("server reliability", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("does not retry non-retryable 4xx responses", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 401, text: () => Promise.resolve("bad key") });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const dest = createPostHogServer({ apiKey: "k", batchSize: 1, maxRetries: 3 });
+    dest.init({} as any);
+    await expect(dest.send(dest.transform(makeEvent(), {} as any), {} as any)).rejects.toThrow("401");
+    // 401 is terminal — one attempt, no retries
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries a 429 rate-limit response", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 429, text: () => Promise.resolve("slow down") });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const dest = createPostHogServer({ apiKey: "k", batchSize: 1, maxRetries: 2 });
+    dest.init({} as any);
+    await expect(dest.send(dest.transform(makeEvent(), {} as any), {} as any)).rejects.toThrow("429");
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("requeues a failed batch instead of dropping it, and resends later", async () => {
+    // First flush fails on every attempt; the event must survive in the buffer.
+    const failing = vi.fn().mockResolvedValue({ ok: false, status: 500, text: () => Promise.resolve("down") });
+    vi.stubGlobal("fetch", failing);
+
+    const dest = createPostHogServer({ apiKey: "k", batchSize: 1, maxRetries: 0 });
+    dest.init({} as any);
+    await expect(dest.send(dest.transform(makeEvent({ id: "keep-me" }), {} as any), {} as any)).rejects.toThrow("500");
+
+    // PostHog recovers — teardown's flush should resend the requeued event.
+    const ok = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", ok);
+    await dest.teardown?.();
+
+    expect(ok).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(ok.mock.calls[0][1].body);
+    expect(body.uuid).toBe("keep-me");
+  });
+
+  it("drops oldest events and logs once the buffer exceeds maxBufferSize", async () => {
+    const failing = vi.fn().mockResolvedValue({ ok: false, status: 500, text: () => Promise.resolve("down") });
+    vi.stubGlobal("fetch", failing);
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const dest = createPostHogServer({ apiKey: "k", batchSize: 1, maxRetries: 0, maxBufferSize: 1 });
+    dest.init({} as any);
+
+    await expect(dest.send(dest.transform(makeEvent({ id: "e1" }), {} as any), {} as any)).rejects.toThrow();
+    await expect(dest.send(dest.transform(makeEvent({ id: "e2" }), {} as any), {} as any)).rejects.toThrow();
+
+    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining("buffer exceeded 1; dropped 1"));
+  });
+
+  it("auto-flushes on the interval timer", async () => {
+    vi.useFakeTimers();
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const dest = createPostHogServer({ apiKey: "k", batchSize: 5, flushIntervalMs: 1000 });
+    dest.init({} as any);
+    await dest.send(dest.transform(makeEvent(), {} as any), {} as any);
+    expect(mockFetch).not.toHaveBeenCalled(); // buffered, below batchSize
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch.mock.calls[0][0]).toBe("https://us.i.posthog.com/batch/");
+
+    vi.useRealTimers();
+  });
+});

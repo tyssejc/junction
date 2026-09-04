@@ -528,6 +528,22 @@ git commit -m "feat(posthog): server transform (capture + \$identify)"
 
 ## Task 3: Server destination — send, batching, retry, factory
 
+> **Amendment (post-review, 2026-09-04):** The Task 3 reviewer flagged three
+> reliability defects in the flush/retry design *as originally specified below*.
+> Adjudicated with the maintainer → fix all three, so the code below is
+> superseded on these points:
+> 1. **No silent data loss.** `flush()` requeues its batch on an exhausted-retry
+>    failure instead of discarding it. A new `maxBufferSize` config (default 1000)
+>    bounds memory, dropping + logging oldest events past the cap — mirroring
+>    core's consent-queue guardrails.
+> 2. **Timer-flush failures always log.** The `setInterval` flush no longer gates
+>    its error log behind `config.debug` (that path runs outside the collector's
+>    `send()` wrapper, so a swallowed error would be invisible).
+> 3. **Non-retryable 4xx short-circuit.** `postWithRetry` retries only 429 + 5xx;
+>    a 401/400/422 throws immediately (`isRetryableStatus`).
+>
+> See `packages/destination-posthog/src/server.ts` for the shipped implementation.
+
 **Files:**
 - Modify: `packages/destination-posthog/src/server.ts`
 - Test: `packages/destination-posthog/src/server.test.ts` (add describe blocks)
