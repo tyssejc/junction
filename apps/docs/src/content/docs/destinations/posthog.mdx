@@ -1,0 +1,50 @@
+---
+title: PostHog
+description: Send Junction events to PostHog — web (device-mode) or server (cloud-mode).
+---
+
+`@junctionjs/destination-posthog` offers two tree-shakeable factories mirroring the
+device-mode vs cloud-mode split. Import only the one you need.
+
+## Web (device-mode)
+
+Loads `posthog-js` on the page for the full library — sessionization, person profiles,
+session replay, feature flags, browser-signal enrichment. Junction stays the event source of
+truth: `posthog-js` autocapture and pageview capture are **off by default**.
+
+```ts
+import { createPostHogWeb } from "@junctionjs/destination-posthog";
+
+const posthogWeb = createPostHogWeb({
+  apiKey: "phc_...",
+  host: "https://us.i.posthog.com",
+  sessionReplay: false,
+});
+```
+
+## Server (cloud-mode)
+
+Forwards events to PostHog's HTTP capture API. No replay, flags, or client sessionization —
+the "just get events into my dataset" path. Buffers and flushes to `/batch` with retry.
+
+```ts
+import { createPostHogServer } from "@junctionjs/destination-posthog";
+
+const posthogServer = createPostHogServer({
+  apiKey: "phc_...",
+  batchSize: 20,
+  maxRetries: 3,
+});
+```
+
+## Consent
+
+Both default to `consent: ["analytics"]` and only initialize after consent resolves — no
+consent means `posthog-js` never loads and no cookies are set. Session replay stays under
+`analytics`; treat it as sensitive.
+
+## Identity
+
+Junction's canonical identity maps onto PostHog's single `distinct_id`: anonymous events use
+`anonymousId`; after `identify()` the destination emits `$identify` (server) or calls
+`posthog.identify()` (web) to stitch prior anonymous history to the known person.
