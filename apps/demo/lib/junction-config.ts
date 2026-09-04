@@ -1,6 +1,7 @@
 import { readConsentCookie } from "@/components/consent/use-consent-cookie";
 import type { CollectorConfig } from "@junctionjs/core";
 import { ga4 } from "@junctionjs/destination-ga4";
+import { createPostHogWeb } from "@junctionjs/destination-posthog";
 import { contracts } from "./contracts";
 import { demoSink, simulatedAmplitude, simulatedMeta } from "./demo-sink";
 
@@ -44,6 +45,17 @@ export const junctionConfig: CollectorConfig = {
               sendPageView: false,
               consentMode: true,
             },
+            consent: ["analytics"],
+            enabled: true,
+          },
+        ]
+      : []),
+    // Real PostHog (device-mode) — gated on env var so the demo works without it.
+    ...(process.env.NEXT_PUBLIC_POSTHOG_KEY
+      ? [
+          {
+            destination: createPostHogWeb({ apiKey: process.env.NEXT_PUBLIC_POSTHOG_KEY }),
+            config: {},
             consent: ["analytics"],
             enabled: true,
           },
