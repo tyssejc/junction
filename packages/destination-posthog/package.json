@@ -1,6 +1,6 @@
 {
   "name": "@junctionjs/destination-posthog",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "PostHog destination for Junction — web (device-mode) and server (cloud-mode)",
   "type": "module",
   "main": "dist/index.js",
