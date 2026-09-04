@@ -57,6 +57,7 @@ interface PostHogJs {
   capture: (name: string, properties?: Record<string, unknown>) => void;
   identify: (distinctId: string, properties?: Record<string, unknown>) => void;
   opt_out_capturing: () => void;
+  opt_in_capturing: () => void;
   __loaded?: boolean;
 }
 
@@ -65,15 +66,58 @@ function getPostHog(): PostHogJs | undefined {
   return (window as unknown as { posthog?: PostHogJs }).posthog;
 }
 
-/** Inject the posthog-js snippet with an array stub that queues calls until the script loads. */
+// Method names PostHog's array.js expects on the stub so queued calls replay
+// after the real SDK loads. Ported from PostHog's official loader snippet.
+const POSTHOG_STUB_METHODS =
+  "capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset group".split(
+    " ",
+  );
+
+/**
+ * Install PostHog's queuing stub on window.posthog, then inject array.js. This is
+ * the queue-before-load pattern required by .claude/rules/destinations.md: without
+ * the stub, window.posthog is undefined until the async array.js executes, so init()
+ * and every capture()/identify() fired before then — including the first page:viewed
+ * on load — are silently dropped. The stub queues those calls; array.js replays them.
+ */
 function loadSnippet(scriptUrl: string): void {
   if (typeof window === "undefined") return;
-  const w = window as unknown as { posthog?: PostHogJs; document?: Document };
-  if (w.posthog?.__loaded) return;
+  const w = window as unknown as { posthog?: any; document?: Document };
+  // Already fully loaded, or the stub is already installed (__SV) — idempotent.
+  if (w.posthog?.__loaded || w.posthog?.__SV) return;
 
   const doc = w.document;
   if (!doc) return;
   if (doc.querySelector(`script[src="${scriptUrl}"]`)) return;
+
+  const stub: any = w.posthog || [];
+  w.posthog = stub;
+  stub._i = [];
+  stub.init = (apiKey: string, options?: Record<string, unknown>, name?: string) => {
+    const queueMethod = (base: any, method: string) => {
+      let target = base;
+      let key = method;
+      const parts = method.split(".");
+      if (parts.length === 2) {
+        target = base[parts[0]];
+        key = parts[1];
+      }
+      target[key] = (...args: unknown[]) => {
+        target.push([key].concat(args));
+      };
+    };
+    let u: any = stub;
+    const instanceName = typeof name !== "undefined" ? name : "posthog";
+    if (typeof name !== "undefined") {
+      u = stub[name] = [];
+    }
+    u.people = u.people || [];
+    for (const method of POSTHOG_STUB_METHODS) {
+      queueMethod(u, method);
+    }
+    stub._i.push([apiKey, options, instanceName]);
+  };
+  stub.__SV = 1;
 
   const script = doc.createElement("script");
   script.async = true;
@@ -136,8 +180,12 @@ export function createPostHogWeb(config: PostHogWebConfig): Destination<PostHogW
     },
 
     onConsent(state: ConsentState) {
+      const posthog = getPostHog();
+      if (!posthog) return;
       if (state.analytics === false) {
-        getPostHog()?.opt_out_capturing();
+        posthog.opt_out_capturing();
+      } else if (state.analytics === true) {
+        posthog.opt_in_capturing();
       }
     },
   };

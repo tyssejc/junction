@@ -56,6 +56,7 @@ interface FakePostHog {
   capture: ReturnType<typeof vi.fn>;
   identify: ReturnType<typeof vi.fn>;
   opt_out_capturing: ReturnType<typeof vi.fn>;
+  opt_in_capturing: ReturnType<typeof vi.fn>;
   __loaded: boolean;
 }
 
@@ -65,6 +66,7 @@ function installFakePostHog(): FakePostHog {
     capture: vi.fn(),
     identify: vi.fn(),
     opt_out_capturing: vi.fn(),
+    opt_in_capturing: vi.fn(),
     __loaded: true,
   };
   vi.stubGlobal("window", { posthog: fake });
@@ -166,5 +168,58 @@ describe("web consent", () => {
     dest.init({} as any);
     dest.onConsent?.({ analytics: true } as any);
     expect(fake.opt_out_capturing).not.toHaveBeenCalled();
+  });
+
+  it("opts back in when analytics consent is re-granted", () => {
+    const fake = installFakePostHog();
+    const dest = createPostHogWeb({ apiKey: "phc_test" });
+    dest.init({} as any);
+    dest.onConsent?.({ analytics: true } as any);
+    expect(fake.opt_in_capturing).toHaveBeenCalled();
+  });
+});
+
+describe("web loader (queue-before-load)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function installFakeDom() {
+    const created: Array<Record<string, unknown>> = [];
+    const firstScript = { parentNode: { insertBefore: vi.fn() } };
+    const doc = {
+      querySelector: vi.fn(() => null),
+      createElement: vi.fn(() => {
+        const el: Record<string, unknown> = {};
+        created.push(el);
+        return el;
+      }),
+      getElementsByTagName: vi.fn(() => [firstScript]),
+    };
+    vi.stubGlobal("window", { document: doc });
+    return { doc, created };
+  }
+
+  it("installs a queuing stub and injects array.js when posthog isn't loaded", () => {
+    const { created } = installFakeDom();
+    const dest = createPostHogWeb({ apiKey: "phc_test" });
+    dest.init({} as any);
+
+    const ph = (window as unknown as { posthog: any }).posthog;
+    expect(ph).toBeDefined();
+    expect(typeof ph.capture).toBe("function"); // stub method installed
+    expect(ph._i).toHaveLength(1); // init call queued for replay
+    expect(created[0].src).toContain("/static/array.js");
+  });
+
+  it("queues capture calls fired before array.js loads instead of dropping them", () => {
+    installFakeDom();
+    const dest = createPostHogWeb({ apiKey: "phc_test" });
+    dest.init({} as any);
+    dest.send({ type: "capture", name: "product_added", properties: { $lib: "junction-web" } } as any, {} as any);
+
+    const ph = (window as unknown as { posthog: any }).posthog;
+    const queued = (ph as unknown[]).find((e) => Array.isArray(e) && e[0] === "capture");
+    expect(queued).toEqual(["capture", "product_added", { $lib: "junction-web" }]);
   });
 });
