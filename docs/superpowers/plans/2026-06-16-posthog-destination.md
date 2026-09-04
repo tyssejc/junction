@@ -932,6 +932,22 @@ git commit -m "feat(posthog): web transform (capture + identify intents)"
 
 ## Task 5: Web destination — loader, send, consent, factory
 
+> **Amendment (post-review, 2026-09-04):** Review of the implementation below
+> surfaced two plan-mandated defects; adjudicated with the maintainer → fix both,
+> so the code below is superseded on these points:
+> 1. **`loadSnippet` never created `window.posthog`.** As written it only injects
+>    `array.js`, so `init()`'s `getPostHog()?.init(...)` short-circuits and posthog
+>    never initializes in a real browser — and every `capture`/`identify` before the
+>    async script loads (including the first `page:viewed`) is dropped. Fixed by
+>    installing PostHog's official queuing stub (the queue-before-load pattern
+>    `.claude/rules/destinations.md` requires); `array.js` replays the queue on load.
+> 2. **`onConsent` only opted out.** Re-granting analytics consent was a no-op.
+>    Fixed to call `opt_in_capturing()` on `analytics === true` (consent-first).
+>
+> Deferred (not fixed): missing-`apiKey` validation is inside the `window` guard,
+> so SSR misconfig no-ops silently until client mount — low value, folded into a
+> later cross-destination validation pass. See `src/web.ts` for the shipped code.
+
 **Files:**
 - Modify: `packages/destination-posthog/src/web.ts`
 - Test: `packages/destination-posthog/src/web.test.ts` (add describe blocks)
